@@ -664,12 +664,39 @@ function setupPanelInteraction() {
 
 
 /* --------------------------------------------------------------------------
+   로그인된 사용자 이름 적용
+   - signup 팀원이 추가할 localStorage("user_name") 기준
+   - 값이 없으면 메인 더미 사용자 → 그래도 없으면 "사용자"
+   -------------------------------------------------------------------------- */
+function getLoggedInUserName() {
+  const stored = localStorage.getItem("user_name");
+  if (stored && stored.trim()) return stored.trim();
+  return mainUser?.name || "사용자";
+}
+
+function applyProfileUser() {
+  const userName = getLoggedInUserName();
+  const avatarUrl =
+    "https://api.dicebear.com/7.x/initials/svg?backgroundColor=FF6F00&seed=" +
+    encodeURIComponent(userName);
+
+  const nameEl = document.querySelector(".profile-menu-name");
+  if (nameEl) nameEl.textContent = userName;
+
+  document.querySelectorAll("#profile-avatar, .profile-menu-avatar").forEach((img) => {
+    img.src = avatarUrl;
+  });
+}
+
+/* --------------------------------------------------------------------------
    우측 상단 원형 프로필 메뉴 토글
    -------------------------------------------------------------------------- */
 function setupProfileMenu() {
   const profileBtn = document.getElementById("profile-btn");
   const profileMenu = document.getElementById("profile-menu");
   if (!profileBtn || !profileMenu) return;
+
+  applyProfileUser();
 
   const openMenu = () => {
     profileMenu.classList.remove("hidden");
@@ -698,6 +725,24 @@ function setupProfileMenu() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenu();
   });
+
+  // 로그아웃: 세션 정리 후 로그인 페이지로 이동
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      logout();
+    });
+  }
+}
+
+/* --------------------------------------------------------------------------
+   로그아웃 — 로그인 세션 정리 후 login.html 이동
+   -------------------------------------------------------------------------- */
+function logout() {
+  localStorage.removeItem("user_name");
+  sessionStorage.clear();
+  window.location.href = "login.html";
 }
 
 setupProfileMenu();

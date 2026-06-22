@@ -72,7 +72,8 @@ function endPatrol() {
   }
 
   const mainUser = dummyUsers.find(u => u.isMain);
-  sessionStorage.setItem("patrolLog", JSON.stringify({
+  // 새 탭(보고서 페이지)에서도 읽어야 하므로 localStorage 사용
+  localStorage.setItem("patrolLog", JSON.stringify({
     agentId:          mainUser.id,
     agentName:        mainUser.name,
     startTime:        startTime?.toISOString() ?? null,
@@ -87,13 +88,8 @@ function endPatrol() {
 
   document.getElementById("timerDisplay").textContent = formatTime(seconds);
 
-  const btnEnd     = document.getElementById("btnEnd");
-  const btnStandby = document.getElementById("btnStandby");
-  btnEnd.textContent     = "✅ 종료됨";
-  btnEnd.disabled        = true;
-  btnStandby.textContent = "← 뒤로 가기";
-  btnStandby.className   = "btn btn-ghost";
-  btnStandby.onclick     = () => { window.location.href = "index.html"; };
+  // 순찰 종료 → 같은 탭에서 보고서 작성 페이지로 이동
+  window.location.href = "patrol-report.html";
 }
 
 // ============================================================
