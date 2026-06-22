@@ -1,0 +1,94 @@
+/* ==========================================================================
+   화성시 시스템 — 글로벌 스타일
+   ========================================================================== */
+:root {
+    /* 배경 및 표면 */
+    --bg-color: #F5F6F8;
+    --card-color: #FFFFFF;
+    --border-color: #E4E7EC;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    /* 화성시 브랜드 컬러 (주황) */
+    --primary-color: #FF6F00;
+    --primary-hover: #E65100;
+    --primary-light: #FFF3E0;
+    --primary-muted: #FFB74D;
+
+    /* 텍스트 */
+    --text-main: #1A1A1A;
+    --text-sub: #5C5C5C;
+    --text-muted: #9E9E9E;
+
+    /* 상태 컬러 */
+    --color-danger: #D32F2F;
+    --color-success: #2E7D32;
+    --color-warning: #ED6C02;
+    --color-gray: #757575;
+
+    /* 레이아웃 */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+}
+
+/* ==========================================================================
+   기본 리셋
+   ========================================================================== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--primary-hover);
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   공통 유틸리티
+   ========================================================================== */
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.text-primary { color: var(--primary-color) !important; }
+.text-danger { color: var(--color-danger) !important; }
+.text-success { color: var(--color-success) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.hidden { display: none !important; }
+
+/* ==========================================================================
+   페이지 공통 (지도 등)
+   ========================================================================== */
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* 이 아래에서 각 페이지·컴포넌트별 스타일을 추가하세요 */
