@@ -1,8 +1,8 @@
-// ============================================================
+// ==========================================================================
 //  report.js — 순찰 기록 보고서 (동선 길이에 따른 자동 비율 조절 버전)
 //  patrol-app.js 가 localStorage("patrolLog") 에 저장한
 //  실제 데이터 규격을 읽어 처리하며, 지도 축척을 자동으로 계산한다.
-// ============================================================
+// ==========================================================================
 
 /**
  * 1. 로컬스토리지에서 다영이가 저장한 순찰 로그 데이터 읽기 (기존 유지)
@@ -99,13 +99,12 @@ async function initReportMap(log) {
     });
     polyline.setMap(map);
 
-    // 🚩 출발지 마커 핀 꽂기
     new kakao.maps.Marker({
         position: linePath[0],
         map: map,
     });
 
-    // 🎯 도착지 뱃지형 오버레이 설정
+    // 도착지 뱃지형 오버레이 설정
     const targetZoneType =
         (destination && destination.type) ||
         (log && log.targetZoneType) ||
@@ -142,7 +141,6 @@ window.addEventListener("DOMContentLoaded", () => {
         timeInput.value = "기록된 순찰 시간 없음";
     }
 
-    // 🗺️ 자동 축척 제어형 미니 지도 렌더링 가동
     if (typeof kakao !== 'undefined' && kakao.maps) {
         initReportMap(log);
     } else {
@@ -151,11 +149,12 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
- * 7. 🔥 [수정] 하단 [순찰 기록 등록] 클릭 시 데이터를 누적하여 리스트 화면으로 연동
+ * 7. 🔥 [디자인 퀄리티 전면 업그레이드] 순찰 기록 등록 및 예쁜 인라인 배너 안내
  */
 document.getElementById("btn-submit-report").addEventListener("click", () => {
     const notes = document.getElementById("patrol-notes").value;
     const weather = document.getElementById("weather-status").value;
+    const submitBtn = document.getElementById("btn-submit-report");
 
     if (!notes.trim()) {
         alert("순찰 기록이나 특이사항을 한 줄이라도 적어 주세요!");
@@ -177,18 +176,46 @@ document.getElementById("btn-submit-report").addEventListener("click", () => {
         time: buildPatrolTimeLabel(log),
         weather: weather,
         notes: notes.trim(),
+        author: currentUser.name || "익명 대원", 
         status: weather.includes("단계3") || weather.includes("단계4") || weather.includes("단계5") ? "이상 발견" : "정상 완료"
     };
 
-    // 로컬스토리지에 기존 누적 리스트가 있으면 가져오고 없으면 빈 배열로 시작
     let patrolReports = JSON.parse(localStorage.getItem("patrolReports")) || [];
-    
-    // 최신 항목이 맨 앞으로 오도록 추가
     patrolReports.unshift(newReport);
-
-    // 배열 전체를 로컬스토리지에 재저장
     localStorage.setItem("patrolReports", JSON.stringify(patrolReports));
 
-    alert("순찰 기록이 성공적으로 등록되었습니다. 완료 내역 목록으로 이동합니다.");
-    window.location.href = "my-reports.html";
+    // 🚨 [구린 모달 제거 및 인라인 안내 배너 구현]
+    // 버튼 중복 클릭 방지
+    submitBtn.disabled = true;
+
+    // 기존에 혹시 남아있을지 모를 안내 배너 제거
+    const existingMsg = document.getElementById("success-inline-msg");
+    if (existingMsg) existingMsg.remove();
+
+    // 부드럽고 친절한 주황색 톤 안내 배너 생성
+    const successBanner = document.createElement("div");
+    successBanner.id = "success-inline-msg";
+    successBanner.style.cssText = `
+        background-color: #fff0e6;
+        color: #ff6f00;
+        font-size: 14px;
+        font-weight: 700;
+        text-align: center;
+        padding: 14px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        border: 1px solid #ffdbcc;
+        width: 100%;
+        box-sizing: border-box;
+        animation: fadeIn 0.25s ease;
+    `;
+    successBanner.innerHTML = "✅ 순찰 기록이 성공적으로 등록되었습니다.<br><span style='font-size:12px; font-weight:500; color:#666;'>잠시 후 완료 내역 목록으로 자동 이동합니다.</span>";
+
+    // 등록 버튼 바로 위에 이쁘게 끼워 넣기
+    submitBtn.parentNode.insertBefore(successBanner, submitBtn);
+
+    // 대원이 인지할 수 있도록 1.5초 대기 후 목록 레이아웃으로 화면 이동
+    setTimeout(() => {
+        window.location.href = "my-reports.html";
+    }, 1500);
 });

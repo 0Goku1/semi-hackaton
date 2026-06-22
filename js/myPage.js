@@ -28,22 +28,24 @@ function togglePagePassword(inputId, button) {
   }
 }
 
-// 🔄 구역 변경 / 비밀번호 변경 탭 전환 상호작용
+// 🔄 원래 설계된 CSS 클래스(.hidden) 토글 방식 적용
 function switchTab(tab) {
   const tabs = document.querySelectorAll('.tab-btn');
   const regionForm = document.getElementById('region-form');
   const passwordForm = document.getElementById('password-form');
 
+  if (!regionForm || !passwordForm) return;
+
   if (tab === 'region') {
       tabs[0].classList.add('active');
       tabs[1].classList.remove('active');
-      regionForm.classList.remove('hidden');
-      passwordForm.classList.add('hidden');
+      regionForm.classList.remove('hidden');    
+      passwordForm.classList.add('hidden');    
   } else {
       tabs[0].classList.remove('active');
       tabs[1].classList.add('active');
-      regionForm.classList.add('hidden');
-      passwordForm.classList.remove('hidden');
+      regionForm.classList.add('hidden');       
+      passwordForm.classList.remove('hidden'); 
   }
 }
 
@@ -69,7 +71,8 @@ function handleGuChange() {
 
 // 🏢 변경된 행정 구역 데이터 로컬 스토리지 업데이트 및 동기화
 function saveUpdatedRegion(e) {
-  e.preventDefault();
+  if (e && typeof e.preventDefault === "function") e.preventDefault();
+  
   const gu = document.getElementById("modal-signup-gu").value;
   const region = document.getElementById("modal-signup-region").value;
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
@@ -80,78 +83,119 @@ function saveUpdatedRegion(e) {
       currentUser.region = region;
       localStorage.setItem("currentUser", JSON.stringify(currentUser));
 
-      const userIndex = users.findIndex(u => u.name === currentUser.name);
+      const userIndex = users.findIndex(u => (u.id === currentUser.id || u.name === currentUser.name));
       if (userIndex !== -1) {
           users[userIndex].gu = gu;
           users[userIndex].region = region;
           localStorage.setItem("users", JSON.stringify(users));
       }
 
-      alert("🟢 담당 행정 구역 정보가 정상적으로 수정 및 저장되었습니다.");
       window.location.replace("index.html");
   }
   return false;
 }
 
-// 🔑 비밀번호 변경 프로세스
+// 🔑 [예쁜 인라인 안내 디자인 적용] 비밀번호 변경 프로세스
 function changePassword(e) {
-  e.preventDefault();
-  const currentPw = document.getElementById('current-password').value;
-  const newPw = document.getElementById('new-password').value;
-  const confirmPw = document.getElementById('new-password-confirm').value;
+  if (e && typeof e.preventDefault === "function") {
+      e.preventDefault(); 
+  }
+  
+  const currentPwEl = document.getElementById('current-password');
+  const newPwEl = document.getElementById('new-password');
+  const confirmPwEl = document.getElementById('new-password-confirm');
+
+  const currentPw = currentPwEl.value;
+  const newPw = newPwEl.value;
+  const confirmPw = confirmPwEl.value;
+  
+  currentPwEl.setCustomValidity("");
+  newPwEl.setCustomValidity("");
+  confirmPwEl.setCustomValidity("");
   
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
   const users = JSON.parse(localStorage.getItem("users") || "[]");
 
   if (!currentUser) return false;
 
-  const userIndex = users.findIndex(u => u.name === currentUser.name);
+  const userIndex = users.findIndex(u => (u.name === currentUser.name || u.id === currentUser.id));
+  if (userIndex === -1) return false;
   
-  if (userIndex !== -1) {
-      if (users[userIndex].pw !== currentPw) {
-          alert("❌ 현재 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.");
-          return false;
-      }
-    
-      const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,10}$/;
-      if (!pwRegex.test(newPw)) {
-          alert("⚠️ 새 비밀번호는 영문과 숫자를 조합하여 8~10자로 입력해 주세요.");
-          return false;
-      }
-
-      if (newPw !== confirmPw) {
-          alert("❌ 새 비밀번호 확인 입력이 일치하지 않습니다.");
-          return false;
-      }
-    
-      users[userIndex].pw = newPw;
-      localStorage.setItem("users", JSON.stringify(users));
-    
-      alert("🔒 보안 정보 변경 성공!\n안전한 순찰을 위해 다시 로그인해 주세요.");
-      localStorage.removeItem('currentUser');
-      window.location.replace("login.html");
+  // 입력창 하단에 순정 말풍선 에러 매핑
+  if (users[userIndex].pw !== currentPw) {
+      currentPwEl.setCustomValidity("현재 비밀번호가 일치하지 않습니다.");
+      currentPwEl.reportValidity();
+      return false;
   }
+    
+  const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,10}$/;
+  if (!pwRegex.test(newPw)) {
+      newPwEl.setCustomValidity("영문과 숫자를 조합하여 8~10자로 입력해 주세요.");
+      newPwEl.reportValidity();
+      return false;
+  }
+
+  if (newPw !== confirmPw) {
+      confirmPwEl.setCustomValidity("새 비밀번호 확인 입력이 일치하지 않습니다.");
+      confirmPwEl.reportValidity();
+      return false;
+  }
+    
+  // 데이터 반영 및 세션 끊기
+  users[userIndex].pw = newPw;
+  localStorage.setItem("users", JSON.stringify(users));
+  localStorage.removeItem('currentUser');
+    
+  // 🚨 [핵심 변경 디자인]: 투박한 모달 없이 폼 맨 아래에 동적으로 세련된 인라인 메시지 생성 및 전개
+  const formGroupBtn = confirmPwEl.closest('form').querySelector('.edit-btn-group');
+  
+  // 기존에 혹시 생성되어 있을지 모를 텍스트박스 제거용
+  const existingSuccessMsg = document.getElementById("success-inline-msg");
+  if(existingSuccessMsg) existingSuccessMsg.remove();
+
+  const successMessage = document.createElement("div");
+  successMessage.id = "success-inline-msg";
+  // 코리요 시그니처 주황색 컬러 바탕에 깔끔한 디자인 튜닝
+  successMessage.style.cssText = `
+    background-color: #fff0e6;
+    color: #ff6f00;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-align: center;
+    padding: 14px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ffdbcc;
+    animation: fadeIn 0.3s ease;
+  `;
+  successMessage.innerHTML = "보안 정보 변경 성공!<br><span style='font-size:12px; font-weight:500; color:#666;'>안전한 순찰을 위해 잠시 후 로그인 화면으로 이동합니다.</span>";
+  
+  // 버튼 컴포넌트 바로 위에 이쁘게 안착
+  formGroupBtn.parentNode.insertBefore(successMessage, formGroupBtn);
+
+  // 대원이 텍스트를 읽고 시각적으로 인지할 시간을 준 후 안전하게 스위칭
+  setTimeout(() => {
+      window.location.replace("login.html");
+  }, 1800);
+
   return false;
 }
 
-// 🚀 화면 초기 진입 라이프사이클 처리 (HTML의 class="user-name-field" 구조와 완벽히 동기화)
-document.addEventListener("DOMContentLoaded", function () {
+// 🚀 화면 초기 진입 데이터 매핑
+function loadMyPageData() {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
   
   if (currentUser) {
-      // 🛠️ 핵심 수정: 에러 원인이었던 성명 인풋(class)을 안전하게 찾아서 주입
       const nameFields = document.querySelectorAll(".user-name-field");
       nameFields.forEach(el => {
-          el.value = currentUser.name || "";
+          el.value = currentUser.name || currentUser.id || "";
       });
     
-      // 구청 데이터 바인딩
       const guSelect = document.getElementById("modal-signup-gu");
       if (guSelect && currentUser.gu) {
           guSelect.value = currentUser.gu;
       }
     
-      // 세부 관리지역 리스트 생성 및 바인딩
       handleGuChange();
       
       const regionSelect = document.getElementById("modal-signup-region");
@@ -161,4 +205,16 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
       handleGuChange();
   }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadMyPageData();
+  
+  const currentPwEl = document.getElementById('current-password');
+  const newPwEl = document.getElementById('new-password');
+  const confirmPwEl = document.getElementById('new-password-confirm');
+  
+  if(currentPwEl) currentPwEl.addEventListener("input", () => currentPwEl.setCustomValidity(""));
+  if(newPwEl) newPwEl.addEventListener("input", () => newPwEl.setCustomValidity(""));
+  if(confirmPwEl) confirmPwEl.addEventListener("input", () => confirmPwEl.setCustomValidity(""));
 });

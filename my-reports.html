@@ -17,10 +17,8 @@
           <p>내가 작성한 실시간 완료 내역</p>
         </div>
 
-        <!-- 💡 실시간 등록 데이터 리스트가 동적으로 꽂히는 영역 -->
         <div class="report-list" id="dynamic-report-list">
-          <!-- 스크립트에 의해 카드가 여기에 렌더링됩니다 -->
-        </div>
+          </div>
 
         <div class="back-btn-area">
           <button type="button" class="panel-btn btn-primary" onclick="window.location.href='index.html';" style="width: 100%; height: 48px; padding: 0; font-size: 15px; border-radius: 12px; background-color: var(--text-sub);">
@@ -35,11 +33,24 @@
       document.addEventListener("DOMContentLoaded", function () {
         const reportListContainer = document.getElementById("dynamic-report-list");
         
-        // 로컬스토리지에서 대원이 등록한 순찰 내역 배열 파싱
+        // 1. 현재 로그인한 세션 유저 정보(이지영 대원 정보) 획득
+        const currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
+        
+        // 로컬스토리지에서 대원들이 등록한 전체 순찰 내역 배열 파싱
         const savedReports = JSON.parse(localStorage.getItem("patrolReports")) || [];
 
-        // 데이터가 없는 경우 예외 디자인 처리
-        if (savedReports.length === 0) {
+        // 🚨 [대원 필터 적용 핵심]: 로그인한 유저가 있다면 작성자(author) 이름이 로그인한 유저명과 정확히 같은 것만 걸러냅니다!
+        const myFilteredReports = savedReports.filter(report => {
+          if (currentUser && currentUser.name) {
+            // 보고서 데이터의 author가 '이지영'인 것만 통과시킵니다.
+            return report.author === currentUser.name; 
+          }
+          // 만약 로그인 정보가 아예 끊겨 있다면 보안상 아무것도 보여주지 않거나 예비 데이터를 처리합니다.
+          return false;
+        });
+
+        // 2. 이지영 대원이 필터링해서 남긴 기록이 단 하나도 없는 경우 예외 처리
+        if (myFilteredReports.length === 0) {
           reportListContainer.innerHTML = `
             <div style="text-align: center; color: #868e96; padding: 60px 0; font-size: 14px; line-height: 1.6;">
               📋 아직 등록된 순찰 기록이 없습니다.<br>첫 순찰 활동을 마친 후 등록해 보세요!
@@ -48,8 +59,8 @@
           return;
         }
 
-        // 축적된 데이터를 활용해 동적으로 HTML 카드 스트링 구성 후 삽입
-        reportListContainer.innerHTML = savedReports.map(report => {
+        // 3. 필터링을 거친 순수한 이지영 대원의 데이터만 활용해 동적으로 HTML 카드 스트링 구성 후 삽입
+        reportListContainer.innerHTML = myFilteredReports.map(report => {
           const badgeClass = report.status === "이상 발견" ? "status-alert" : "status-success";
           
           return `
