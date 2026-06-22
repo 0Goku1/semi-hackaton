@@ -3,11 +3,11 @@
 // 파일명: js/auth.js
 // ==========================================
 
-// 🏢 화성시 구청별 세부 관리지역(읍·면·동) 데이터 매핑
-const regionData = {
-    "효행구": ["봉담읍", "우정읍", "향남읍", "남양읍", "매송면", "비봉면", "마도면", "송산면"],
-    "병점구": ["서신면", "팔탄면", "장안면", "양감면", "정남면", "새솔동", "진안동", "병점1동"],
-    "만세구": ["병점2동", "반월동", "기배동", "화산동"],
+// 🏢 [업데이트 완료] 화성시 구청별 최종 세부 관리지역(읍·면·동) 데이터 매핑
+const hscRegionData = {
+    "효행구": ["봉담읍", "매송면", "비봉면", "정남면", "기배동"],
+    "병점구": ["진안동", "병점1동", "병점2동", "반월동", "화산동"],
+    "만세구": ["우정읍", "향남읍", "남양읍", "마도면", "송산면", "서신면", "팔탄면", "장안면", "양감면", "새솔동"],
     "동탄구": ["동탄1동", "동탄2동", "동탄3동", "동탄4동", "동탄5동", "동탄6동", "동탄7동", "동탄8동", "동탄9동"]
 };
 
@@ -20,8 +20,9 @@ function updateDongOptions() {
     const selectedGu = guSelect.value;
     regionSelect.innerHTML = '<option value="" disabled selected>세부 관리지역(읍·면·동) 선택</option>';
 
-    if (selectedGu && regionData[selectedGu]) {
-        regionData[selectedGu].forEach(dong => {
+    // 변경된 hscRegionData 기준 동적 렌더링
+    if (selectedGu && hscRegionData[selectedGu]) {
+        hscRegionData[selectedGu].forEach(dong => {
             const option = document.createElement('option');
             option.value = dong;
             option.textContent = dong;
