@@ -59,11 +59,11 @@
                 <span class="status-badge ${badgeClass}">${report.status}</span>
               </div>
               <div class="report-mid">
-                <div>📍 순찰 구역: <span class="user-gu-txt">${report.zone}</span></div>
-                <div>⏱️ 소요 시간: <span>${report.time}</span></div>
+                <div>순찰 구역: <span class="user-gu-txt">${report.zone}</span></div>
+                <div>소요 시간: <span>${report.time}</span></div>
                 <div style="font-size: 11px; color: #ff6f00; margin-top: 3px; font-weight: 500;">☀️ 기상 위험 환경: ${report.weather}</div>
               </div>
-              <div class="report-bottom">📋 ${report.notes}</div>
+              <div class="report-bottom">보고: ${report.notes}</div>
             </div>
           `;
         }).join('');

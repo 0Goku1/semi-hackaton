@@ -16,7 +16,7 @@
 
     <div class="report-container koriyo-card">
         <div class="report-header">
-            <span class="title-main">🦖 코리요</span>
+            <span class="title-main">🦖 지킴이</span>
             <span class="title-sub">순찰 기록 보고서</span>
         </div>
         
@@ -24,23 +24,23 @@
 
         <div class="report-form">
             <div class="form-group">
-                <label for="patrol-time">⏱️ 동선 소요 시간</label>
+                <label for="patrol-time">동선 소요 시간</label>
                 <input type="text" id="patrol-time" readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold; color: var(--hs-orange-main);">
             </div>
 
             <div class="form-group">
-                <label>🗺️ 순찰 이동 동선</label>
+                <label>순찰 이동 동선</label>
                 <div id="report-map" style="width: 100%; height: 200px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background-color: var(--hs-gray-light); margin-top: 4px;"></div>
             </div>
 
             <div class="form-group">
-                <label for="weather-status">☀️ 현장 기상 및 산불 위험 환경</label>
+                <label for="weather-status">현장 기상 및 산불 위험 환경</label>
                 <select id="weather-status">
-                    <option value="단계1">🟢 1단계: 맑음 (실효습도 50% 이상, 바람 잔잔)</option>
-                    <option value="단계2">🟡 2단계: 구름많음 (실효습도 40%대, 낙엽 약간 건조)</option>
-                    <option value="단계3">🟠 3단계: 당일 건조주의보 (실효습도 35% 이하, 주의 요망)</option>
-                    <option value="단계4">🔴 4단계: 건조경보 + 강풍 (산불 발생 시 대형 확산 위험 ⚠️)</option>
-                    <option value="단계5">🚨 5단계: 돌발 기후 (인근 마른하늘 번개 또는 강한 돌풍 발생)</option>
+                    <option value="단계1">1단계: 맑음 (실효습도 50% 이상, 바람 잔잔)</option>
+                    <option value="단계2">2단계: 구름많음 (실효습도 40%대, 낙엽 약간 건조)</option>
+                    <option value="단계3">3단계: 당일 건조주의보 (실효습도 35% 이하, 주의 요망)</option>
+                    <option value="단계4">4단계: 건조경보 + 강풍 (산불 발생 시 대형 확산 위험)</option>
+                    <option value="단계5">5단계: 돌발 기후 (인근 마른하늘 번개 또는 강한 돌풍 발생)</option>
                 </select>
             </div>
 

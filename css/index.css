@@ -366,3 +366,21 @@ body.index-page {
         box-shadow: none;
     }
 }
+
+/* 1. 우측 상단 미니 프로필 강제 변경 */
+#profile-avatar {
+    content: url("../images/markers/me.png") !important; /* 옛날 HTML 이미지 주소를 무시하고 코리요로 강제 교체 */
+    object-fit: contain !important;
+    background-color: #ffffff !important;
+    box-sizing: border-box !important;
+}
+
+/* 2. 드롭다운 메뉴 안의 큰 프로필 강제 변경 */
+.profile-menu-avatar {
+    content: url("../images/markers/me.png") !important;
+    object-fit: contain !important;
+    background-color: #ffffff !important;
+    border: 2px solid #ff6f00 !important; /* 깔끔하게 주황색 테두리 적용 */
+    box-sizing: border-box !important;
+    padding: 2px !important;
+}
