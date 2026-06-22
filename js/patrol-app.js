@@ -12,6 +12,7 @@ let locationOverlay = null;
 let destOverlay     = null;
 let hasGpsFix       = false;
 let latestLatlng    = null;   
+let patrolOrigin    = null;   // 순찰 시작(첫 GPS) 좌표 → 보고서 OSRM 1단계 출발점으로 저장
 let watchId         = null;
 
 let seconds       = 0;
@@ -105,6 +106,8 @@ function endPatrol() {
     targetZoneId:     DEST_ZONE.id,
     targetZoneType:   DEST_ZONE.type,
     destination:      DEST_ZONE.address,
+    originLat:        patrolOrigin?.lat ?? null,  // 보고서 동선(OSRM 1단계) 출발점
+    originLng:        patrolOrigin?.lng ?? null,
     userGu:           finalGu,
     userRegion:       finalRegion,
     status:           "COMPLETED",
@@ -191,6 +194,7 @@ function startLocationTracking() {
 
       if (!hasGpsFix && accuracy < 100) {
         hasGpsFix = true;
+        patrolOrigin = { lat, lng }; // 순찰 시작 좌표 기록 (보고서 동선 재현용)
         mapRef.setCenter(latlng);
 
         try {

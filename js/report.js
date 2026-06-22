@@ -56,67 +56,60 @@ function buildPatrolTimeLabel(log) {
 }
 
 /**
- * 🗺️ 5. [수정 완료] 동선 길이에 맞춰 비율과 중심점이 자동 조절되는 고정형 지도 함수 (기존 유지)
+ * 🗺️ 5. index.html 과 동일한 순찰 동선을 그리는 고정형 미니 지도
+ *    js/patrolRoute.js 의 buildPatrolRoutePoints() 공통 모듈을 그대로 호출한다.
+ *     - 1단계: 순찰 시작 좌표(originLat/originLng) → DZ_001 (OSRM 도보)
+ *     - 2단계: DZ_001 → SO_001~SO_017 → DZ_003 (수동 경유지)
  */
-function initReportMap(log) {
+async function initReportMap(log) {
     const mapContainer = document.getElementById('report-map');
     if (!mapContainer) return;
 
-    // 📍 기본 목적지 좌표 설정 (데이터 유실 대비 화성시 봉담읍 상리 민원지 fallback)
-    let destLat = 37.2164851600941; 
-    let destLng = 126.934789483585;
+    // 📍 순찰 시작 좌표(OSRM 1단계 출발점) — patrolLog 에 저장돼 있으면 사용, 없으면 DZ_001 부터 시작
+    const origin =
+        log && log.originLat != null && log.originLng != null
+            ? { lat: parseFloat(log.originLat), lng: parseFloat(log.originLng) }
+            : null;
 
-    // 실시간 로그 데이터가 안전하게 넘어왔다면 해당 위경도로 덮어쓰기
-    if (log && log.lat && log.lng) {
-        destLat = parseFloat(log.lat);
-        destLng = parseFloat(log.lng);
-    }
+    // 🔗 index.html(app.js) 과 동일한 동선 계산 (공통 모듈)
+    const { points, destination } = await buildPatrolRoutePoints(origin);
+    const linePath = points.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
+    if (!linePath.length) return;
 
-    // 📐 순찰 동선 좌표 배열 (이 배열이 길어지거나 짧아져도 바운더리를 자동 계산함)
-    const linePath = [
-        new kakao.maps.LatLng(destLat - 0.0020, destLng - 0.0025), // 출발점
-        new kakao.maps.LatLng(destLat - 0.0010, destLng - 0.0012), // 경유지 1
-        new kakao.maps.LatLng(destLat - 0.0004, destLng + 0.0003), // 경유지 2
-        new kakao.maps.LatLng(destLat, destLng)                    // 도착점
-    ];
+    // 1) 드래그/줌 잠금된 고정 지도
+    const map = new kakao.maps.Map(mapContainer, {
+        center: linePath[0],
+        level: 5,
+        draggable: false, // 🚫 시연 중 마우스 드래그로 지도 날아감 방지
+        zoomable: false,  // 🚫 마우스 휠 확대/축소 잠금
+    });
 
-    // 1) 초기 지도 객체 임시 레벨로 선언 (드래그/확대 줌 기능 완벽 차단)
-    const mapOption = {
-        center: linePath[0], 
-        level: 3,            
-        draggable: false,    // 🚫 시연 중 마우스 드래그로 지도 날아감 방지
-        zoomable: false      // 🚫 마우스 휠 확대/축소 잠금
-    };
-
-    const map = new kakao.maps.Map(mapContainer, mapOption);
-
-    // 2) 🔥 [핵심 기능] 모든 노선 좌표를 포함하는 스마트 바운더리 영역 계산
+    // 2) 🔥 전체 동선이 미니맵에 꽉 차도록 바운더리 자동 계산
     const bounds = new kakao.maps.LatLngBounds();
-    
-    // 노선도의 모든 포인트를 바운더리에 등록
-    linePath.forEach(point => bounds.extend(point));
-
-    // 계산된 바운더리 크기에 딱 맞춰 지도의 축척 비율(Level)과 중심점을 자동으로 재매핑!
+    linePath.forEach((point) => bounds.extend(point));
     map.setBounds(bounds);
 
-    // 🟠 코리요 테마 주황색 매핑 라인 정의 (#FF6B00)
+    // 🟠 동선 주황 실선 (index 와 동일 색상)
     const polyline = new kakao.maps.Polyline({
         path: linePath,
-        strokeWeight: 6,           // 선명하게 보이도록 두께 6 설정
-        strokeColor: '#FF6B00',    // 브랜드 컬러 주황색
-        strokeOpacity: 0.9,        
-        strokeStyle: 'solid'       
+        strokeWeight: 6,
+        strokeColor: PATROL_ROUTE_CONFIG.color,
+        strokeOpacity: 0.9,
+        strokeStyle: 'solid',
     });
     polyline.setMap(map);
 
     // 🚩 출발지 마커 핀 꽂기
     new kakao.maps.Marker({
         position: linePath[0],
-        map: map
+        map: map,
     });
 
     // 🎯 도착지 뱃지형 오버레이 설정
-    const targetZoneType = log ? log.targetZoneType : "불법소각 민원";
+    const targetZoneType =
+        (destination && destination.type) ||
+        (log && log.targetZoneType) ||
+        "산불 주의 구역";
     const contentHtml = `
         <div style="background:#FF3B30; color:white; font-size:10px; font-weight:800; padding:3px 8px; border-radius:20px; box-shadow:0 2px 6px rgba(0,0,0,0.2); white-space:nowrap; border:1.5px solid white;">
             🎯 ${targetZoneType}
@@ -127,11 +120,11 @@ function initReportMap(log) {
         content: contentHtml,
         yAnchor: 1.6,
         xAnchor: 0.5,
-        map: map
+        map: map,
     });
 
-    // 📱 디바이스 회전이나 브라우저 리사이즈 시에도 자동 맞춤 비율 상시 고정
-    window.addEventListener('resize', function() {
+    // 📱 리사이즈 시에도 자동 맞춤 비율 상시 고정
+    window.addEventListener('resize', function () {
         map.setBounds(bounds);
     });
 }

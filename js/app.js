@@ -1,11 +1,6 @@
 const DEFAULT_CENTER = { lat: 37.1995, lng: 126.8312 }; // 위치 권한 거부 시 fallback (화성시청 부근)
 
-// 1단계: 현재 위치 → 이 지점까지는 OSRM 도보 길찾기(실제 도로)
-const OSRM_VIA_ID = "DZ_001";
-// 2단계: 위 지점 → 경유지(SO_xxx) → 최종 도착지까지는 수동 실선
-const PATROL_DESTINATION_ID = "DZ_003";
-
-const ROUTE_COLOR = "#FF5722";
+// 동선 설정/계산은 js/patrolRoute.js (PATROL_ROUTE_CONFIG, buildPatrolRoutePoints) 공통 모듈 사용
 
 const MIN_LOADING_MS = 1500;
 
@@ -317,79 +312,33 @@ function buildRouteSummaryText(routeResult) {
 
 async function drawRoute() {
   const origin = { lat: mainUser.lat, lng: mainUser.lng };
-  const viaZone = dummyDangerZones.find((z) => z.id === OSRM_VIA_ID);
-  const destination = dummyDangerZones.find((z) => z.id === PATROL_DESTINATION_ID);
 
   clearRouteLines();
-  const allPoints = [];
-  let totalDistance = 0;
 
-  // 2단계 시작점 = OSRM이 실제로 끝난 지점 (없으면 viaZone 좌표)
-  let junction = viaZone ? { lat: viaZone.lat, lng: viaZone.lng } : origin;
+  // 공통 모듈로 동선 좌표 계산 (1단계 OSRM + 2단계 수동 경유지)
+  const { points, destination } = await buildPatrolRoutePoints(origin);
 
-  // ── 1단계: 현재 위치 → DZ_001 (OSRM 도보 길찾기, 실제 도로 실선) ──
-  if (viaZone) {
-    try {
-      const osrm = await fetchOsrmRoute(origin, { lat: viaZone.lat, lng: viaZone.lng });
-      drawRouteLine(osrm.path, "solid", 6, 0.95);
-      osrm.path.forEach((p) => allPoints.push(p));
-      totalDistance += osrm.distance || 0;
-      // OSRM 경로의 마지막 좌표를 2단계 시작점으로 사용 → 끊김 없이 연결
-      if (osrm.path.length) junction = osrm.path[osrm.path.length - 1];
-    } catch (err) {
-      console.warn("[OSRM 실패] 현재위치→DZ_001 직선으로 대체", err);
-      const seg = [origin, { lat: viaZone.lat, lng: viaZone.lng }];
-      drawRouteLine(seg, "solid", 6, 0.95);
-      seg.forEach((p) => allPoints.push(p));
-      totalDistance += estimateDistanceMeters(seg[0], seg[1]);
-    }
-  }
-
-  // ── 2단계: OSRM 종료지점 → 경유지(SO_001~) → DZ_003 (수동 주황 실선) ──
-  const manualPoints = [junction];
-  dummyWaypoints.forEach((w) => manualPoints.push({ lat: w.lat, lng: w.lng }));
-  if (destination) manualPoints.push({ lat: destination.lat, lng: destination.lng });
-
-  if (manualPoints.length >= 2) {
-    drawRouteLine(manualPoints, "solid", 6, 0.95);
-    manualPoints.forEach((p) => allPoints.push(p));
-    for (let i = 0; i < manualPoints.length - 1; i++) {
-      totalDistance += estimateDistanceMeters(manualPoints[i], manualPoints[i + 1]);
-    }
+  // 하나의 주황 실선으로 그리기
+  if (points.length >= 2) {
+    drawRouteLine(points, "solid", 6, 0.95);
   }
 
   // 최종 도착지 마커만 표시 (경유지 핑 없음)
   drawStopMarkers(destination);
 
+  // 전체 거리(Haversine 합산) → 도보 4km/h 기준 예상 소요시간(초)
+  let totalDistance = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    totalDistance += estimateDistanceMeters(points[i], points[i + 1]);
+  }
+
   const bounds = new kakao.maps.LatLngBounds();
-  allPoints.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
+  points.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
   map.setBounds(bounds);
 
-  // 전체 거리를 도보 4km/h 기준으로 환산한 예상 소요시간(초)
   const estDuration = Math.round((totalDistance / 4000) * 3600);
 
   return { distance: totalDistance, duration: estDuration };
-}
-
-/* --------------------------------------------------------------------------
-   OSRM 도보 경로 (현재 위치 → 목적지, 실제 도로)
-   -------------------------------------------------------------------------- */
-async function fetchOsrmRoute(from, to) {
-  const coords = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-  const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
-
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`OSRM API ${res.status}`);
-
-  const data = await res.json();
-  const route = data.routes?.[0];
-  if (data.code !== "Ok" || !route) throw new Error("OSRM 경로 없음");
-
-  return {
-    path: route.geometry.coordinates.map(([lng, lat]) => ({ lat, lng })),
-    distance: route.distance,
-    duration: route.duration,
-  };
 }
 
 /* --------------------------------------------------------------------------
@@ -400,7 +349,7 @@ function drawRouteLine(points, strokeStyle, strokeWeight, strokeOpacity) {
   const line = new kakao.maps.Polyline({
     path,
     strokeWeight,
-    strokeColor: ROUTE_COLOR,
+    strokeColor: PATROL_ROUTE_CONFIG.color,
     strokeOpacity,
     strokeStyle,
   });
@@ -426,7 +375,7 @@ function drawStopMarkers(destination) {
 
   // 최종 도착지: 깃발 마커
   if (destination) {
-    const flag = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:${ROUTE_COLOR}; color:#fff; font-size:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.35);"><span style="transform:rotate(45deg);">★</span></div>`;
+    const flag = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:${PATROL_ROUTE_CONFIG.color}; color:#fff; font-size:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.35);"><span style="transform:rotate(45deg);">★</span></div>`;
 
     const overlay = new kakao.maps.CustomOverlay({
       map,
