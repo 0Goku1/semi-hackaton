@@ -12,6 +12,12 @@
 
     <div id="map"></div>
 
+    <!-- 위치 확인 동안 로딩 스플래시 (GPS fix 전까지 어색한 지도 가림) -->
+    <div id="patrol-splash">
+      <div class="patrol-spinner"></div>
+      <p class="patrol-splash-text">순찰 시작 중...</p>
+    </div>
+
     <header class="header">
       <div class="header-row">
         <button class="btn-back-header" onclick="window.location.href='index.html'">‹</button>
@@ -49,6 +55,7 @@
   </div>
 
   <script src="js/dummyData.js"></script>
+  <script src="js/patrolRoute.js"></script>
   <script src="js/secrets.js"></script>
   <script src="js/mapMarkers.js"></script>
   <script>

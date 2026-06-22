@@ -109,10 +109,10 @@ async function initReportMap(log) {
     const targetZoneType =
         (destination && destination.type) ||
         (log && log.targetZoneType) ||
-        "산불 주의 구역";
+        "산불 위험 구역";
     const contentHtml = `
         <div style="background:#FF3B30; color:white; font-size:10px; font-weight:800; padding:3px 8px; border-radius:20px; box-shadow:0 2px 6px rgba(0,0,0,0.2); white-space:nowrap; border:1.5px solid white;">
-            🎯 ${targetZoneType}
+            ${targetZoneType}
         </div>`;
 
     new kakao.maps.CustomOverlay({

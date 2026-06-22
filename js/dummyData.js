@@ -19,7 +19,7 @@ const dummyDangerZones = [
   },
   {
     id: "DZ_003",
-    type: "산불 주의 구역",     
+    type: "산불 위험 구역",     
     lat: 37.2140726845749,     
     lng: 126.933003172514,     
     dangerLevel: "위험도 낮음",       

@@ -1,9 +1,15 @@
 // ============================================================
 //  patrol-app.js  —  순찰 페이지 (상태별 타이틀 스위칭 및 유저 세션 연동)
-//  경로: OSRM 도보 API  (출발 = GPS 현재위치, 도착 = DZ_001)
+//  경로: index.html / patrol-report.html 과 동일한 공통 모듈(patrolRoute.js) 사용
+//        1단계 OSRM(현재위치→DZ_001) + 2단계 수동 경유지(SO_001~017→DZ_003)
+//  내 위치: 파란 핀(.my-location-dot)이 GPS 받아 실시간 이동
 // ============================================================
 
-const DEST_ZONE = dummyDangerZones.find(z => z.id === "DZ_001");
+// 최종 도착지 (공통 모듈 설정과 동일: DZ_003)
+const DEST_ZONE = dummyDangerZones.find(z => z.id === PATROL_ROUTE_CONFIG.destinationId);
+
+// 도보 이동 화면 줌 레벨 (낮을수록 확대 — index.html 보다 세밀하게)
+const PATROL_FOLLOW_LEVEL = 3;
 
 // ── 상태 변수 ──────────────────────────────────────────────
 let mapRef          = null;
@@ -118,44 +124,34 @@ function endPatrol() {
 }
 
 // ============================================================
-//  OSRM 도보 경로 API
+//  로딩 스플래시 (위치 확인 동안 어색한 지도 가림)
 // ============================================================
-async function fetchOsrmRoute(startLat, startLng) {
-  const url =
-    `https://router.project-osrm.org/route/v1/foot/` +
-    `${startLng},${startLat};${DEST_ZONE.lng},${DEST_ZONE.lat}` +
-    `?overview=full&geometries=geojson`;
-
-  const res  = await fetch(url);
-  const data = await res.json();
-
-  if (data.code !== "Ok" || !data.routes?.length) {
-    throw new Error("OSRM: 경로 없음");
-  }
-
-  return data.routes[0].geometry.coordinates.map(
-    ([lng, lat]) => new kakao.maps.LatLng(lat, lng)
-  );
+let patrolSplashHidden = false;
+function hidePatrolSplash() {
+  if (patrolSplashHidden) return;
+  patrolSplashHidden = true;
+  const splash = document.getElementById("patrol-splash");
+  if (!splash) return;
+  splash.classList.add("fade-out");
+  setTimeout(() => splash.remove(), 600);
 }
 
 // ============================================================
-//  경로 폴리라인
+//  경로 폴리라인 (공통 모듈이 계산한 전체 동선을 하나의 실선으로)
 // ============================================================
-function drawOsrmRoute(kakaoPoints) {
+function drawPatrolRoute(kakaoPoints) {
   if (routePolyline) routePolyline.setMap(null);
 
   routePolyline = new kakao.maps.Polyline({
     path:          kakaoPoints,
-    strokeWeight:  5,
-    strokeColor:   "#ff6b35",
-    strokeOpacity: 0.9,
+    strokeWeight:  6,
+    strokeColor:   PATROL_ROUTE_CONFIG.color,
+    strokeOpacity: 0.95,
     strokeStyle:   "solid",
   });
   routePolyline.setMap(mapRef);
-
-  const bounds = new kakao.maps.LatLngBounds();
-  kakaoPoints.forEach(p => bounds.extend(p));
-  mapRef.setBounds(bounds);
+  // ※ 도보 이동 화면이므로 전체 경로에 맞춘 줌아웃(setBounds)은 하지 않는다.
+  //    내 위치 중심 + 확대 레벨 유지는 GPS 콜백에서 처리한다.
 }
 
 // ============================================================
@@ -195,30 +191,52 @@ function startLocationTracking() {
       if (!hasGpsFix && accuracy < 100) {
         hasGpsFix = true;
         patrolOrigin = { lat, lng }; // 순찰 시작 좌표 기록 (보고서 동선 재현용)
+        // 도보 화면: 내 위치를 중심으로 + 확대 레벨로 고정
+        mapRef.setLevel(PATROL_FOLLOW_LEVEL);
         mapRef.setCenter(latlng);
+        hidePatrolSplash(); // 위치 확정 → 로딩 스플래시 제거
 
         try {
-          const routePoints = await fetchOsrmRoute(lat, lng);
-          if (latestLatlng) routePoints[0] = latestLatlng;
-          drawOsrmRoute(routePoints);
+          // index / report 와 동일한 전체 동선 계산 (현재위치 → DZ_001 → SO_xxx → DZ_003)
+          const { points } = await buildPatrolRoutePoints({ lat, lng });
+          const kakaoPoints = points.map(
+            (p) => new kakao.maps.LatLng(p.lat, p.lng)
+          );
+          // 시작점을 실제 현재 위치로 보정
+          if (kakaoPoints.length) kakaoPoints[0] = latestLatlng || latlng;
+          drawPatrolRoute(kakaoPoints);
+          // 경로를 그린 뒤에도 화면 중심/확대는 내 위치 기준으로 유지
+          mapRef.setLevel(PATROL_FOLLOW_LEVEL);
+          mapRef.setCenter(latestLatlng || latlng);
         } catch (e) {
-          console.warn("OSRM 실패 → 직선:", e.message);
-          drawOsrmRoute([
+          console.warn("동선 계산 실패 → 직선 대체:", e.message);
+          drawPatrolRoute([
             latestLatlng || latlng,
             new kakao.maps.LatLng(DEST_ZONE.lat, DEST_ZONE.lng),
           ]);
+          mapRef.setLevel(PATROL_FOLLOW_LEVEL);
+          mapRef.setCenter(latestLatlng || latlng);
         }
+      } else if (hasGpsFix) {
+        // 이동 중: 내 위치가 항상 화면 중심이 되도록 부드럽게 따라가기
+        mapRef.panTo(latlng);
       }
 
       updateLocationDot(latlng);
     },
-    (err) => { console.warn("GPS 오류:", err.message); },
+    (err) => {
+      console.warn("GPS 오류:", err.message);
+      hidePatrolSplash(); // 위치 실패해도 무한 로딩 방지
+    },
     {
       enableHighAccuracy: true,
       maximumAge:         0,
       timeout:            15000,
     }
   );
+
+  // 혹시 위치 확정 이벤트가 안 와도 10초 후 강제로 스플래시 제거 (fallback)
+  setTimeout(hidePatrolSplash, 10000);
 }
 
 // ============================================================
@@ -254,7 +272,7 @@ function initPatrolMap() {
 
       mapRef = new kakao.maps.Map(document.getElementById("map"), {
           center: new kakao.maps.LatLng(centerLat, centerLng),
-          level: 7 
+          level: PATROL_FOLLOW_LEVEL // 도보 화면이므로 확대된 레벨로 시작 (GPS fix 후 내 위치로 재중심)
       });
 
       destOverlay = new kakao.maps.CustomOverlay({
@@ -265,7 +283,7 @@ function initPatrolMap() {
             padding:4px 10px;border-radius:20px;
             box-shadow:0 2px 8px rgba(0,0,0,0.3);
             white-space:nowrap;border:2px solid white;">
-            🎯 ${DEST_ZONE.type}
+            ${DEST_ZONE.type}
           </div>`,
           yAnchor: 1.8,
           xAnchor: 0.5,
