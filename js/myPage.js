@@ -3,8 +3,8 @@
 // 파일명: js/myPage.js
 // ==========================================================================
 
-// 🏢 [업데이트 완료] 화성시 구청별 최종 세부 관리지역 데이터 매핑
-const hscRegionData = {
+// 🏢 화성시 구청별 세부 관리지역 데이터 매핑
+const myPageRegionData = {
   "효행구": ["봉담읍", "매송면", "비봉면", "정남면", "기배동"],
   "병점구": ["진안동", "병점1동", "병점2동", "반월동", "화산동"],
   "만세구": ["우정읍", "향남읍", "남양읍", "마도면", "송산면", "서신면", "팔탄면", "장안면", "양감면", "새솔동"],
@@ -47,7 +47,7 @@ function switchTab(tab) {
   }
 }
 
-// 🗺️ 담당 구청 변경 시 소속 읍면동 리스트 동적 리렌더링 (새 매핑 변수명 연동)
+// 🗺️ 담당 구청 변경 시 소속 읍면동 리스트 동적 리렌더링
 function handleGuChange() {
   const guSelect = document.getElementById("modal-signup-gu");
   const regionSelect = document.getElementById("modal-signup-region");
@@ -56,9 +56,9 @@ function handleGuChange() {
   const selectedGu = guSelect.value;
   regionSelect.innerHTML = "";
 
-  // 변경된 hscRegionData에서 하위 지역 목록을 동적으로 파싱
-  if (hscRegionData[selectedGu]) {
-      hscRegionData[selectedGu].forEach(dong => {
+  // 매핑 데이터 주입
+  if (myPageRegionData[selectedGu]) {
+      myPageRegionData[selectedGu].forEach(dong => {
           const option = document.createElement("option");
           option.value = dong;
           option.textContent = dong;
@@ -76,12 +76,10 @@ function saveUpdatedRegion(e) {
   const users = JSON.parse(localStorage.getItem("users") || "[]");
 
   if (currentUser) {
-      // 1. 세션 데이터 갱신
       currentUser.gu = gu;
       currentUser.region = region;
       localStorage.setItem("currentUser", JSON.stringify(currentUser));
 
-      // 2. 회원 가상 DB 데이터 동시 갱신
       const userIndex = users.findIndex(u => u.name === currentUser.name);
       if (userIndex !== -1) {
           users[userIndex].gu = gu;
@@ -90,12 +88,12 @@ function saveUpdatedRegion(e) {
       }
 
       alert("🟢 담당 행정 구역 정보가 정상적으로 수정 및 저장되었습니다.");
-      window.location.replace("index.html"); // 메인 지도로 복귀 및 세션 새로고침 효과
+      window.location.replace("index.html");
   }
   return false;
 }
 
-// 🔑 비밀번호 실시간 검증 및 가상 DB 교체 프로세스
+// 🔑 비밀번호 변경 프로세스
 function changePassword(e) {
   e.preventDefault();
   const currentPw = document.getElementById('current-password').value;
@@ -136,22 +134,29 @@ function changePassword(e) {
   return false;
 }
 
-// 🚀 화면 초기 진입 렌더링 라이프사이클 처리
+// 🚀 화면 초기 진입 라이프사이클 처리 (HTML의 class="user-name-field" 구조와 완벽히 동기화)
 document.addEventListener("DOMContentLoaded", function () {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+  
   if (currentUser) {
-      // 성명 필드 세팅
-      document.querySelectorAll(".user-name-field").forEach(el => el.value = currentUser.name);
+      // 🛠️ 핵심 수정: 에러 원인이었던 성명 인풋(class)을 안전하게 찾아서 주입
+      const nameFields = document.querySelectorAll(".user-name-field");
+      nameFields.forEach(el => {
+          el.value = currentUser.name || "";
+      });
     
       // 구청 데이터 바인딩
-      if (currentUser.gu) {
-          document.getElementById("modal-signup-gu").value = currentUser.gu;
+      const guSelect = document.getElementById("modal-signup-gu");
+      if (guSelect && currentUser.gu) {
+          guSelect.value = currentUser.gu;
       }
     
-      // 구청 소속 읍면동 리런더링 후 동 데이터 최종 선택 고정
+      // 세부 관리지역 리스트 생성 및 바인딩
       handleGuChange();
-      if (currentUser.region) {
-          document.getElementById("modal-signup-region").value = currentUser.region;
+      
+      const regionSelect = document.getElementById("modal-signup-region");
+      if (regionSelect && currentUser.region) {
+          regionSelect.value = currentUser.region;
       }
   } else {
       handleGuChange();
