@@ -159,15 +159,18 @@ function drawOsrmRoute(kakaoPoints) {
 //  내 위치 파란 점
 // ============================================================
 function updateLocationDot(latlng) {
+  const me = dummyUsers.find((u) => u.isMain);
+  const markerEl = createMeMarkerElement(getDisplayUserName(me?.name));
+
   if (locationOverlay) {
     locationOverlay.setPosition(latlng);
   } else {
     locationOverlay = new kakao.maps.CustomOverlay({
       position: latlng,
-      content:  '<div class="my-location-dot"></div>',
-      yAnchor:  0.5,
-      xAnchor:  0.5,
-      zIndex:   5,
+      content: markerEl,
+      yAnchor: 0.5,
+      xAnchor: 0.5,
+      zIndex: 5,
     });
     locationOverlay.setMap(mapRef);
   }

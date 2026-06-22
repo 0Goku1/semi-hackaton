@@ -258,45 +258,97 @@ body.index-page {
 }
 
 /* ==========================================================================
-   지도 마커 (팀원 / 위험지역)
+   초기 지도 로딩 스플래시
    ========================================================================== */
-.member-pin {
-    width: 16px;
-    height: 16px;
+#app-splash {
+    position: absolute;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(160deg, #fff3e0 0%, #ffe0b2 100%);
+    transition: opacity 0.5s ease;
+}
+
+#app-splash.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#app-splash .splash-icon {
+    font-size: 46px;
+    animation: splash-pulse 1.2s ease-in-out infinite;
+}
+
+#app-splash .splash-text {
+    color: var(--primary-hover);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+@keyframes splash-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* ==========================================================================
+   지도 마커 (DiceBear 이니셜 아바타)
+   ========================================================================== */
+.map-marker {
+    pointer-events: none;
+}
+
+.map-marker-me {
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    border: 2px solid #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-    cursor: pointer;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+    background: #fff;
+    padding: 3px;
+    box-sizing: border-box;
 }
 
-.member-pin.patrolling {
-    background-color: var(--color-success);
+.map-marker-me img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    display: block;
 }
 
-.member-pin.resting {
-    background-color: var(--color-gray);
+.map-marker-member {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--color-gray);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
-.danger-pin {
-    width: 22px;
-    height: 22px;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    border: 2px solid #ffffff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+.map-marker-member--patrolling {
+    border-color: var(--color-gray);
 }
 
-.danger-pin.high {
-    background-color: var(--color-danger);
+.map-marker-member--resting {
+    border-color: #1E88E5;
 }
 
-.danger-pin.medium {
-    background-color: var(--color-warning);
+.map-marker-member img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    border-radius: 50%;
 }
 
-.danger-pin.low {
-    background-color: var(--color-gray);
-}
+/* 위험지역은 app.js의 drawDangerZones()에서 Circle + 커스텀 라벨로 표현 */
 
 /* 실제 휴대폰에서는 프레임 없이 전체 화면 */
 @media (max-width: 480px) and (orientation: portrait) {
