@@ -548,12 +548,14 @@ function getLoggedInUserName() {
 
 function applyProfileUser() {
   const userName = getLoggedInUserName();
+  // 성을 뗀 이름 부분만 표시 ("정승우" -> "승우")
+  const givenName = getGivenName(userName);
   const avatarUrl =
     "https://api.dicebear.com/7.x/initials/svg?backgroundColor=FF6F00&seed=" +
-    encodeURIComponent(userName);
+    encodeURIComponent(givenName);
 
   const nameEl = document.querySelector(".profile-menu-name");
-  if (nameEl) nameEl.textContent = userName;
+  if (nameEl) nameEl.textContent = givenName;
 
   document.querySelectorAll("#profile-avatar, .profile-menu-avatar").forEach((img) => {
     img.src = avatarUrl;

@@ -30,9 +30,14 @@ function getMemberAvatarUrl(name, isPatrolling) {
   );
 }
 
+// auth.js 로그인 시 저장하는 localStorage "currentUser" 의 이름을 사용
 function getDisplayUserName(fallbackName) {
-  const signupName = localStorage.getItem("signup-name");
-  if (signupName && signupName.trim()) return signupName.trim();
+  try {
+    const current = JSON.parse(localStorage.getItem("currentUser") || "null");
+    if (current && current.name && current.name.trim()) {
+      return current.name.trim();
+    }
+  } catch (e) {}
   return fallbackName || "사용자";
 }
 
