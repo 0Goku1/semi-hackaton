@@ -15,7 +15,11 @@
     <header class="header">
       <div class="header-row">
         <button class="btn-back-header" onclick="window.location.href='index.html'">‹</button>
-        <div class="header-icon">🌲</div>
+        
+        <div class="header-icon" style="background-color: #ffffff; border: 1.5px solid #ff6f00; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; padding: 2px;">
+          <img src="images/markers/me.png" alt="코리요 프로필" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+
         <div>
           <div class="header-title" id="patrol-header-title">순찰 진행 중</div>
           <div class="header-sub" id="patrol-header-sub">화성시 산불감시 · 구역 로딩 중...</div>
@@ -48,6 +52,18 @@
   <script src="js/secrets.js"></script>
   <script src="js/mapMarkers.js"></script>
   <script>
+    // 🚀 화면 초기 진입 시 로그인한 사용자의 구역 데이터를 동적으로 가져와 매핑하는 스크립트 추가
+    document.addEventListener("DOMContentLoaded", function () {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      if (currentUser && currentUser.gu && currentUser.region) {
+        const subTitleEl = document.getElementById("patrol-header-sub");
+        if (subTitleEl) {
+          subTitleEl.textContent = `화성시 산불감시 · ${currentUser.gu} ${currentUser.region}`;
+        }
+      }
+    });
+
+    // 🗺️ 카카오맵 및 자바스크립트 엔진 구동 연동 유지
     const kakaoScript = document.createElement("script");
     kakaoScript.src =
       "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
@@ -56,7 +72,7 @@
       
     kakaoScript.onload = function () {
       const appScript = document.createElement("script");
-      appScript.src = "js/app.js"; // 프레임워크 스크립트 연결 확인 필요 시 연동
+      appScript.src = "js/app.js"; 
       const patrolScript = document.createElement("script");
       patrolScript.src = "js/patrol-app.js";
       document.body.appendChild(patrolScript);
