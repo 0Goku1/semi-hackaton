@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>코리요 지킴이 - 로그인</title>
+    <link rel="stylesheet" href="css/report.css">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="report-body">
+
+    <div class="mobile-container">
+        <div class="logo-area">
+            <div class="logo-image-box">
+                <img src="koriyo-logo.jpg" alt="코리요 지킴이 로고" class="main-logo-img">
+            </div>
+            <h1 class="logo-title">
+                <span class="orange-txt">코리요</span> 지킴이
+            </h1>
+        </div>
+
+        <form class="login-form" onsubmit="return handleLogin(event)">
+            <div class="input-group">
+                <input type="text" id="username" placeholder="아이디를 입력하세요" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요" required>
+            </div>
+            <button type="submit" class="btn-login">로그인</button>
+        </form>
+
+        <div class="signup-links">
+            <span style="font-size: 14px; color: #666666;">아직 계정이 없으신가요? </span>
+            <a href="signup.html" style="color: var(--koriyo-orange); margin-left: 8px; font-weight: bold; text-decoration: none;">회원가입</a>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>

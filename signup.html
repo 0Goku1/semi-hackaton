@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>코리요 지킴이 - 회원가입</title>
+    <link rel="stylesheet" href="css/report.css">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="report-body">
+
+    <div class="mobile-container">
+        <!-- 🦖 코리요 로고 영역 -->
+        <div class="logo-area">
+            <div class="logo-image-box">
+                <img src="koriyo-logo.jpg" alt="코리요 지킴이 로고" class="main-logo-img">
+            </div>
+            <h2 class="logo-title" style="font-size: 20px;">
+                <span class="orange-txt">지킴이</span> 회원가입
+            </h2>
+        </div>
+
+        <!-- 회원가입 폼 -->
+        <form class="login-form" onsubmit="return handleSignup(event)">
+            <div class="input-group">
+                <input type="text" id="signup-id" placeholder="사용할 아이디 입력" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="signup-pw" placeholder="비밀번호 입력" required>
+            </div>
+            
+            <!-- 🏢 화성시 실제 4개 구청 선택 (첫 번째 드롭다운) -->
+            <div class="input-group">
+                <select id="signup-gu" onchange="updateDongOptions()" required class="select-box">
+                    <option value="" disabled selected>관리 구청 선택</option>
+                    <option value="효행구">효행구</option>
+                    <option value="병점구">병점구</option>
+                    <option value="만세구">만세구</option>
+                    <option value="동탄구">동탄구</option>
+                </select>
+            </div>
+
+            <!-- 🗺️ 세부 관리지역 읍면동 선택 (두 번째 드롭다운) -->
+            <div class="input-group">
+                <select id="signup-region" required class="select-box">
+                    <option value="" disabled selected>세부 관리지역(읍·면·동) 선택</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-login">가입하기</button>
+        </form>
+
+        <!-- 하단 링크 -->
+        <div class="signup-links">
+            <span style="font-size: 14px; color: #666666;">이미 계정이 있으신가요? </span>
+            <a href="login.html" style="color: var(--koriyo-orange); margin-left: 8px; font-weight: bold; text-decoration: none;">로그인하기</a>
+        </div>
+    </div>
+
+    <!-- 순서 주의: 가상 DB 및 구청 연동 스크립트 로드 -->
+    <script src="js/auth.js"></script>
+</body>
+</html>
