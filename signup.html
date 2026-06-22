@@ -10,7 +10,6 @@
 <body class="report-body">
 
     <div class="mobile-container">
-        <!-- 🦖 코리요 로고 영역 -->
         <div class="logo-area">
             <div class="logo-image-box">
                 <img src="koriyo-logo.jpg" alt="코리요 지킴이 로고" class="main-logo-img">
@@ -20,16 +19,25 @@
             </h2>
         </div>
 
-        <!-- 회원가입 폼 -->
         <form class="login-form" onsubmit="return handleSignup(event)">
             <div class="input-group">
-                <input type="text" id="signup-id" placeholder="사용할 아이디 입력" required>
-            </div>
-            <div class="input-group">
-                <input type="password" id="signup-pw" placeholder="비밀번호 입력" required>
+                <input type="text" id="user_name" placeholder="사용자 성명 입력" required>
             </div>
             
-            <!-- 🏢 화성시 실제 4개 구청 선택 (첫 번째 드롭다운) -->
+            <div class="input-group">
+                <input type="text" id="signup-id" placeholder="사용할 아이디 입력 (영문+숫자 6~8자)" required>
+            </div>
+            
+            <div class="input-group" style="position: relative;">
+                <input type="password" id="signup-pw" placeholder="비밀번호 입력 (영문+숫자 8~10자)" required style="padding-right: 45px;">
+                <button type="button" onclick="togglePasswordVisibility('signup-pw', this)" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                    <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                </button>
+            </div>
+            
             <div class="input-group">
                 <select id="signup-gu" onchange="updateDongOptions()" required class="select-box">
                     <option value="" disabled selected>관리 구청 선택</option>
@@ -40,7 +48,6 @@
                 </select>
             </div>
 
-            <!-- 🗺️ 세부 관리지역 읍면동 선택 (두 번째 드롭다운) -->
             <div class="input-group">
                 <select id="signup-region" required class="select-box">
                     <option value="" disabled selected>세부 관리지역(읍·면·동) 선택</option>
@@ -50,14 +57,12 @@
             <button type="submit" class="btn-login">가입하기</button>
         </form>
 
-        <!-- 하단 링크 -->
         <div class="signup-links">
             <span style="font-size: 14px; color: #666666;">이미 계정이 있으신가요? </span>
             <a href="login.html" style="color: var(--koriyo-orange); margin-left: 8px; font-weight: bold; text-decoration: none;">로그인하기</a>
         </div>
     </div>
 
-    <!-- 순서 주의: 가상 DB 및 구청 연동 스크립트 로드 -->
     <script src="js/auth.js"></script>
 </body>
 </html>

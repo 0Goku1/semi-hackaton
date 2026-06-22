@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>코리요 불조심 대작전 - 순찰 기록 보고서</title>
     <link rel="stylesheet" href="css/report.css">
+    
+    <script src="js/secrets.js"></script>
+    <script>
+        // 카카오맵 스크립트를 헤드에서 미리 안전하게 로드합니다.
+        document.write('<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + SECRETS.KAKAO_JS_KEY + '"><\/script>');
+    </script>
 </head>
 <body class="report-body">
 
@@ -20,6 +26,11 @@
             <div class="form-group">
                 <label for="patrol-time">⏱️ 동선 소요 시간</label>
                 <input type="text" id="patrol-time" readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold; color: var(--hs-orange-main);">
+            </div>
+
+            <div class="form-group">
+                <label>🗺️ 순찰 이동 동선</label>
+                <div id="report-map" style="width: 100%; height: 200px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background-color: var(--hs-gray-light); margin-top: 4px;"></div>
             </div>
 
             <div class="form-group">

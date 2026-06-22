@@ -27,6 +27,7 @@
           />
         </button>
 
+        <!-- 📋 프로필 드롭다운 메뉴 (설명글 전부 제거 버전) -->
         <div id="profile-menu" class="hidden" role="menu">
           <div class="profile-menu-header">
             <img
@@ -40,10 +41,16 @@
             </div>
           </div>
 
+          <!-- 1. 내 정보 -->
           <a href="myPage.html" class="profile-menu-item" role="menuitem">내 정보</a>
+
+          <!-- 2. 알림 -->
           <a href="notifications.html" class="profile-menu-item" role="menuitem">알림</a>
-          <a href="settings.html" class="profile-menu-item" role="menuitem">설정</a>
-          <a href="support.html" class="profile-menu-item" role="menuitem">고객센터</a>
+
+          <!-- 3. 순찰 기록 보고서 -->
+          <a href="my-reports.html" class="profile-menu-item" role="menuitem">순찰 기록 보고서</a>
+
+          <!-- 4. 로그아웃 -->
           <a href="login.html" id="logout-btn" class="profile-menu-item profile-menu-item--danger" role="menuitem">로그아웃</a>
         </div>
       </div>
@@ -61,6 +68,7 @@
       </div>
     </div>
 
+    <!-- 🛠️ 스크립트 로드 및 카카오맵 초기화 유지 -->
     <script src="js/secrets.js"></script>
     <script src="js/dummyData.js"></script>
     <script>

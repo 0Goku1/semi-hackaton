@@ -1,5 +1,5 @@
 // ============================================================
-//  patrol-app.js  —  순찰 페이지
+//  patrol-app.js  —  순찰 페이지 (상태별 타이틀 스위칭 및 유저 세션 연동)
 //  경로: OSRM 도보 API  (출발 = GPS 현재위치, 도착 = DZ_001)
 // ============================================================
 
@@ -11,7 +11,7 @@ let routePolyline   = null;
 let locationOverlay = null;
 let destOverlay     = null;
 let hasGpsFix       = false;
-let latestLatlng    = null;   // ✅ 버그2 수정: 이름 하나로 통일
+let latestLatlng    = null;   
 let watchId         = null;
 
 let seconds       = 0;
@@ -38,27 +38,38 @@ function startTimer() {
 }
 
 // ============================================================
-//  버튼 핸들러
+//  버튼 핸들러 (타이틀 텍스트 유기적 매핑 추가)
 // ============================================================
 function toggleStandby() {
   const btn   = document.getElementById("btnStandby");
   const badge = document.getElementById("statusBadge");
+  const title = document.getElementById("patrol-header-title"); // 💡 상단 메인 타이틀 ID 캐싱
 
   if (!isStandby) {
     clearInterval(timerInterval);
     timerInterval = null;
     isStandby     = true;
+    
     btn.textContent = "▶ 순찰 재개";
     btn.classList.replace("btn-ghost", "btn-standby-on");
+    
     badge.textContent = "● 대기중";
     badge.classList.replace("status-active", "status-standby");
+    
+    // 💡 대기중 상태로 바뀔 때 왼쪽 타이틀도 함께 변경
+    if (title) title.textContent = "순찰 일시 대기";
   } else {
     startTimer();
     isStandby = false;
+    
     btn.textContent = "⏸ 순찰 대기";
     btn.classList.replace("btn-standby-on", "btn-ghost");
+    
     badge.textContent = "● 순찰중";
     badge.classList.replace("status-standby", "status-active");
+    
+    // 💡 순찰을 재개하면 원래 타이틀로 완벽 복구
+    if (title) title.textContent = "순찰 진행 중";
   }
 }
 
@@ -72,7 +83,18 @@ function endPatrol() {
   }
 
   const mainUser = dummyUsers.find(u => u.isMain);
-  // 새 탭(보고서 페이지)에서도 읽어야 하므로 localStorage 사용
+  
+  // 가입 시 설정되었던 유저 세션 정보를 로깅 데이터에 함께 포함
+  const currentUserRaw = sessionStorage.getItem("currentUser");
+  let finalGu = "효행구";
+  let finalRegion = "봉담읍";
+
+  if (currentUserRaw) {
+      const user = JSON.parse(currentUserRaw);
+      finalGu = user.gu;
+      finalRegion = user.region;
+  }
+
   localStorage.setItem("patrolLog", JSON.stringify({
     agentId:          mainUser.id,
     agentName:        mainUser.name,
@@ -83,12 +105,12 @@ function endPatrol() {
     targetZoneId:     DEST_ZONE.id,
     targetZoneType:   DEST_ZONE.type,
     destination:      DEST_ZONE.address,
+    userGu:           finalGu,
+    userRegion:       finalRegion,
     status:           "COMPLETED",
   }));
 
   document.getElementById("timerDisplay").textContent = formatTime(seconds);
-
-  // 순찰 종료 → 같은 탭에서 보고서 작성 페이지로 이동
   window.location.href = "patrol-report.html";
 }
 
@@ -159,11 +181,9 @@ function startLocationTracking() {
 
   watchId = navigator.geolocation.watchPosition(
     async (pos) => {
-      // ✅ 버그1 수정: accuracy 도 함께 꺼내기
       const { latitude: lat, longitude: lng, accuracy } = pos.coords;
       const latlng = new kakao.maps.LatLng(lat, lng);
 
-      // ✅ 버그2 수정: 통일된 이름 latestLatlng 사용
       latestLatlng = latlng;
 
       if (!hasGpsFix && accuracy < 100) {
@@ -172,7 +192,6 @@ function startLocationTracking() {
 
         try {
           const routePoints = await fetchOsrmRoute(lat, lng);
-          // OSRM 응답 대기 중 더 정확한 위치가 왔으면 첫 점 교체
           if (latestLatlng) routePoints[0] = latestLatlng;
           drawOsrmRoute(routePoints);
         } catch (e) {
@@ -196,36 +215,60 @@ function startLocationTracking() {
 }
 
 // ============================================================
-//  지도 초기화
+//  🎯 지도 초기화 (가입 세션 데이터 연동)
 // ============================================================
 function initPatrolMap() {
-  const me = dummyUsers.find(u => u.isMain);
-  mapRef = new kakao.maps.Map(document.getElementById("map"), {
-    center: new kakao.maps.LatLng(
-      (me.lat + DEST_ZONE.lat) / 2,
-      (me.lng + DEST_ZONE.lng) / 2
-    ),
-    level: 7,
-  });
+  const currentUserRaw = sessionStorage.getItem("currentUser");
+  let userGu = "효행구";      
+  let userRegion = "봉담읍";  
 
-  destOverlay = new kakao.maps.CustomOverlay({
-    position: new kakao.maps.LatLng(DEST_ZONE.lat, DEST_ZONE.lng),
-    content: `<div style="
-      background:#ff3b30;color:white;
-      font-size:11px;font-weight:800;
-      padding:4px 10px;border-radius:20px;
-      box-shadow:0 2px 8px rgba(0,0,0,0.3);
-      white-space:nowrap;border:2px solid white;">
-      🎯 ${DEST_ZONE.type}
-    </div>`,
-    yAnchor: 1.8,
-    xAnchor: 0.5,
-  });
-  destOverlay.setMap(mapRef);
+  if (currentUserRaw) {
+      const user = JSON.parse(currentUserRaw);
+      userGu = user.gu;          
+      userRegion = user.region;  
+  }
 
-  startLocationTracking();
-  startTime = new Date();
-  startTimer();
+  const headerSub = document.getElementById("patrol-header-sub");
+  if (headerSub) {
+      headerSub.textContent = `화성시 산불감시 · ${userGu} ${userRegion}`;
+  }
+
+  const geocoder = new kakao.maps.services.Geocoder();
+  const searchAddress = `경기도 화성시 ${userRegion}`;
+
+  geocoder.addressSearch(searchAddress, function(result, status) {
+      let centerLat = DEST_ZONE.lat;
+      let centerLng = DEST_ZONE.lng;
+
+      if (status === kakao.maps.services.Status.OK) {
+          centerLat = parseFloat(result[0].y);
+          centerLng = parseFloat(result[0].x);
+      }
+
+      mapRef = new kakao.maps.Map(document.getElementById("map"), {
+          center: new kakao.maps.LatLng(centerLat, centerLng),
+          level: 7 
+      });
+
+      destOverlay = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(DEST_ZONE.lat, DEST_ZONE.lng),
+          content: `<div style="
+            background:#ff3b30;color:white;
+            font-size:11px;font-weight:800;
+            padding:4px 10px;border-radius:20px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.3);
+            white-space:nowrap;border:2px solid white;">
+            🎯 ${DEST_ZONE.type}
+          </div>`,
+          yAnchor: 1.8,
+          xAnchor: 0.5,
+      });
+      destOverlay.setMap(mapRef);
+
+      startLocationTracking();
+      startTime = new Date();
+      startTimer();
+  });
 }
 
 kakao.maps.load(initPatrolMap);

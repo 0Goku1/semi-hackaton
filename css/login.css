@@ -10,23 +10,22 @@
 }
 
 body.report-body {
-    background-color: #F5F5F7 !important; /* 전체 화면 배경 */
+    background-color: #F8F9FA !important; /* 맑고 투명한 화이트 그레이로 필터링 */
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
 }
 
-/* 📱 모바일 디바이스 프레임 고정 */
+/* 📱 모바일 디바이스 프레임 고정 (외곽 선 테두리 색감 보정) */
 .mobile-container {
     width: 100%;
     max-width: 390px;  
     height: 100vh;     
     max-height: 844px; 
     background: #FFFFFF !important; 
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-    border: 1px solid #E2E8F0;
-    border-radius: 24px; 
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.05); /* 부드럽게 퍼지는 트렌디한 그림자 */
+    border: 1px solid #E9ECEF; /* 딱딱한 회색 대신 은은한 파스텔톤 경계선 */
     
     display: flex;
     flex-direction: column;
@@ -34,6 +33,7 @@ body.report-body {
     padding: 40px 24px;
     box-sizing: border-box;
     margin: 0 auto;
+    border-radius: 24px; 
 }
 
 /* 🦖 코리요 이미지 로고 영역 배치 정렬 */
@@ -46,18 +46,19 @@ body.report-body {
     text-align: center;
 }
 
-/* 이미지를 감싸는 서클 박스 */
+/* 이미지를 감싸는 서클 박스 (주황색 테두리 두께 및 그림자 톤 보정) */
 .logo-image-box {
     width: 130px;
     height: 130px;
     background: #FFFFFF;
-    border: 2px solid var(--koriyo-orange);
+    /* 💡 시그니처 주황색 테두리를 얇고 깔끔하게 밀착 */
+    border: 1.5px solid #FF6B00;
     border-radius: 50%; 
     overflow: hidden;    
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 6px 16px rgba(255, 107, 0, 0.12);
+    box-shadow: 0 8px 20px rgba(255, 107, 0, 0.08); /* 번지는 감성 그림자 */
     margin-bottom: 12px;
 }
 
@@ -68,17 +69,17 @@ body.report-body {
     object-fit: cover; 
 }
 
-/* 로고 타이틀 텍스트 */
+/* 로고 타이틀 텍스트 (단단한 차콜 블랙으로 단순함 탈피) */
 .logo-title {
     font-size: 22px;
     font-weight: 800;
-    color: var(--forest-gray);
+    color: #212529; /* 🖤 밋밋한 회색 글자 대신 확실한 딥 블랙으로 무게감 바인딩 */
     letter-spacing: -0.5px;
     margin-top: 4px;
 }
 
 .logo-title .orange-txt {
-    color: var(--koriyo-orange);
+    color: #FF6B00;
 }
 
 /* 📋 입력창 스타일 */
@@ -91,30 +92,40 @@ body.report-body {
     margin-bottom: 12px;
 }
 
+/* 로그인 인풋창 테두리 색감 및 투명도 업그레이드 */
 .input-group input {
     width: 100%;
     height: 54px;
     padding: 0 16px;
-    border: 1px solid var(--border-color);
+    /* 💡 칙칙한 회색 바탕 대신, 깔끔한 미색 투명 인풋 배경과 고해상도 테두리 조합 */
+    border: 1px solid #E9ECEF;
     border-radius: 12px;
     font-size: 15px;
-    background-color: var(--hs-gray-light);
-    color: var(--forest-gray);
+    background-color: #F8F9FA;
+    color: #212529; /* 입력 글자 차콜 블랙 */
     transition: all 0.2s ease;
 }
 
+/* 인풋창 클릭했을 때 오렌지 네온 글로우 효과로 다채로움 추가 */
 .input-group input:focus {
     outline: none;
-    border-color: var(--koriyo-orange);
+    border-color: #FF6B00;
     background-color: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.08);
 }
 
-/* 🚀 로그인 / 가입 버튼 (무조건 상시 노출 오렌지색 고정) */
+/* placeholder 가이드라인 텍스트 투명도 조절 */
+.input-group input::placeholder {
+    color: #ADB5BD;
+}
+
+/* 🚀 로그인 / 가입 버튼 (오렌지 그라데이션 주입으로 입체감 극대화) */
 .btn-login {
     display: block !important;
     width: 100% !important;
     height: 54px !important;
-    background-color: #FF6B00 !important; 
+    /* 💡 평평하고 단순해 보이는 오렌지 대신, 미세 사선 그라데이션 레이어 적용 */
+    background: linear-gradient(135deg, #FF8F00 0%, #FF6B00 100%) !important; 
     color: #FFFFFF !important;            
     border: none !important;
     border-radius: 12px !important;
@@ -124,13 +135,17 @@ body.report-body {
     margin-top: 20px !important;
     opacity: 1 !important;                 
     visibility: visible !important;        
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.2) !important; 
+    box-shadow: 0 6px 16px rgba(255, 107, 0, 0.25) !important; /* 주황색 빔 입체 그림자 */
     transition: all 0.2s ease;
 }
 
+/* 버튼 hover 및 클릭 시 부드러운 딥 오렌지 전환 효과 */
 .btn-login:hover {
-    background-color: #E05E00 !important;
-    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3) !important;
+    background: linear-gradient(135deg, #E05E00 0%, #CE5600 100%) !important;
+    box-shadow: 0 6px 20px rgba(255, 107, 0, 0.35) !important;
+}
+.btn-login:active {
+    transform: scale(0.98);
 }
 
 /* 🔗 하단 이동 링크 링크 */
@@ -139,22 +154,38 @@ body.report-body {
     justify-content: center;
     align-items: center;
     margin-top: 8px;
+    color: #495057; /* 세련된 그레이 */
+    font-size: 14px;
 }
 
-/* 🏢 구청/지역 선택창 전용 스타일 추가 */
+/* "회원가입하기", "로그인하기" 하단 전환 텍스트 포인트 링크 */
+.signup-links a {
+    color: #FF6B00 !important;
+    font-weight: 700;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.signup-links a:hover {
+    color: #E05E00 !important;
+}
+
+/* 🏢 구청/지역 선택창(Select Box) 전용 스타일 색감 보정 */
 .select-box {
     width: 100%;
     height: 54px;
     padding: 0 16px;
-    border: 1px solid var(--border-color);
+    border: 1px solid #E9ECEF;
     border-radius: 12px;
     font-size: 15px;
-    background-color: var(--hs-gray-light);
-    color: var(--forest-gray);
+    background-color: #F8F9FA;
+    color: #495057; /* 고대비 차콜 그레이 */
     outline: none;
     cursor: pointer;
-    /* 브라우저 기본 화살표 세련되게 다듬기 */
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 4 5'><path fill='%23666' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+    transition: all 0.2s ease;
+    
+    /* 화살표 아이콘 세련된 다크 컬러로 필터 교체 */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 4 5'><path fill='%23868E96' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
     background-repeat: no-repeat;
     background-position: right 16px center;
     -webkit-appearance: none;
@@ -163,6 +194,7 @@ body.report-body {
 }
 
 .select-box:focus {
-    border-color: var(--koriyo-orange) !important;
+    border-color: #FF6B00 !important;
     background-color: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.08);
 }

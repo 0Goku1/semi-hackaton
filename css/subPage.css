@@ -1,0 +1,226 @@
+@charset "UTF-8";
+
+/* ==========================================================================
+   📱 코리요 지킴이 서브 페이지 공통 카드 레이아웃 (로그인 화면 핏 반영)
+   ========================================================================== */
+
+.card-wrapper {
+  position: absolute;
+  inset: 16px; /* 모바일 프레임 사방 여백 */
+  background-color: var(--card-color, #ffffff);
+  border-radius: 24px; /* 로그인 박스와 동일한 부드러운 라운드 */
+  padding: 24px 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05); /* 은은한 그림자 */
+}
+
+/* 상단 헤더 타이포그래피 */
+.page-header, .edit-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.page-header h2, .edit-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main, #212529);
+}
+.page-header p, .edit-header p {
+  font-size: 13px;
+  color: var(--text-muted, #868e96);
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   🔒 1. 내 정보 관리 (myPage.html) 전용 스타일
+   ========================================================================== */
+
+/* 구역 수정 / 비밀번호 변경 탭 전환 버튼 구조 */
+.tab-group {
+  display: flex;
+  background-color: #f1f3f5;
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.tab-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted, #868e96);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.tab-btn.active {
+  background-color: var(--card-color, #ffffff);
+  color: var(--primary-color, #ff6f00);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* 로그인 화면 인풋창 규격 완벽 복사 */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.form-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-color, #ff6f00);
+  padding-left: 4px;
+}
+.form-group input, 
+.form-group select {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--border-color, #e9ecef);
+  border-radius: 12px;
+  background-color: var(--card-color, #ffffff);
+  font-size: 14px;
+  color: var(--text-main, #212529);
+  outline: none;
+  box-sizing: border-box;
+}
+.form-group input[readonly] {
+  background-color: #f7f8fa;
+  color: var(--text-muted, #868e96);
+  cursor: not-allowed;
+}
+
+/* 보고서 보러가기 배너 링크 */
+.report-link-banner {
+  margin-top: 10px;
+  padding: 14px;
+  background-color: var(--primary-light, #fff5f0);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--primary-hover, #e66400);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* 하단 버튼 정렬 레이아웃 */
+.edit-btn-group, .back-btn-area {
+  margin-top: auto; /* 하단으로 밀착 */
+}
+.edit-btn-group {
+  display: flex;
+  gap: 10px;
+}
+.edit-cancel-btn {
+  flex: 1;
+  height: 48px;
+  background-color: #f1f3f5;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-sub, #495057);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   🔔 2. 알림 센터 (notifications.html) 전용 스타일
+   ========================================================================== */
+
+.notification-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 2px;
+}
+.notification-list::-webkit-scrollbar {
+  width: 0;
+}
+.noti-item {
+  padding: 14px;
+  border: 1px solid var(--border-color, #e9ecef);
+  border-radius: 14px;
+  background-color: var(--card-color, #ffffff);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.1s ease;
+}
+.noti-item:active {
+  transform: scale(0.98);
+}
+.noti-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.noti-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+.badge-danger { background-color: #fdecea; color: #dc3545; }
+.badge-primary { background-color: var(--primary-light, #fff5f0); color: var(--primary-color, #ff6f00); }
+.badge-warning { background-color: #fff3cd; color: #856404; }
+.noti-time { font-size: 11px; color: var(--text-muted, #868e96); }
+.noti-title { font-size: 14px; font-weight: 700; color: var(--text-main, #212529); }
+.noti-desc { font-size: 13px; color: var(--text-sub, #495057); line-height: 1.4; }
+
+/* ==========================================================================
+   📝 3. 순찰 기록 보고서 (my-reports.html) 전용 스타일
+   ========================================================================== */
+
+.report-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.report-list::-webkit-scrollbar {
+  width: 0;
+}
+.report-card {
+  padding: 14px;
+  border: 1px solid var(--border-color, #e9ecef);
+  border-radius: 14px;
+  background-color: var(--card-color, #ffffff);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.report-card:hover {
+  background-color: #fafbfc;
+}
+.report-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.report-date { font-size: 13px; font-weight: 700; color: var(--text-main, #212529); }
+.status-badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+.status-success { background-color: #e8f5e9; color: #28a745; }
+.status-alert { background-color: #fff3e0; color: #ff9800; }
+.report-mid {
+  font-size: 13px;
+  color: var(--text-sub, #495057);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+}
+.report-mid div span { font-weight: 600; color: var(--text-main, #212529); }
+.report-bottom { font-size: 12px; color: var(--text-muted, #868e96); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

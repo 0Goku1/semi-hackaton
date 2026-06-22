@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>코리요 지킴이 - 내 정보</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/index.css" />
+    <link rel="stylesheet" href="css/subPage.css" />
+    <style>
+      /* 💡 눈 아이콘이 인풋창 내부 우측에 절대좌표로 완벽하게 고정되도록 세팅 */
+      .input-container {
+        position: relative;
+        width: 100%;
+        display: block; /* 가로폭 전체 확보 */
+      }
+      .input-container input {
+        width: 100%;
+        padding-right: 48px; /* 우측 아이콘이 글자를 가리지 않도록 패딩 확보 */
+        box-sizing: border-box;
+      }
+      .password-toggle-btn {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        height: auto;
+        width: auto;
+      }
+      .password-toggle-btn svg {
+        display: block;
+      }
+    </style>
+  </head>
+  <body class="index-page">
+    <div id="phone-frame" style="background-color: #f5f6f8;">
+      <div class="card-wrapper">
+        
+        <div class="edit-header">
+          <h2>내 정보 관리</h2>
+        </div>
+
+        <div class="tab-group">
+          <button class="tab-btn active" onclick="switchTab('region')">구역 변경</button>
+          <button class="tab-btn" onclick="switchTab('password')">비밀번호 변경</button>
+        </div>
+
+        <form id="region-form" onsubmit="return saveUpdatedRegion(event)" style="display: flex; flex-direction: column; flex: 1;">
+          <div class="form-group">
+            <label>대원 성명</label>
+            <input type="text" class="user-name-field" readonly />
+          </div>
+          <div class="form-group">
+            <label>담당 구청</label>
+            <select id="modal-signup-gu" onchange="handleGuChange()" required>
+              <option value="효행구">효행구</option>
+              <option value="병점구">병점구</option>
+              <option value="만세구">만세구</option>
+              <option value="동탄구">동탄구</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>세부 관리지역</label>
+            <select id="modal-signup-region" required></select>
+          </div>
+
+          <!-- ❌ 내가 작성한 순찰 보고서 보기 배너 삭제 완료 -->
+
+          <div class="edit-btn-group">
+            <button type="button" class="edit-cancel-btn" onclick="history.back();">취소</button>
+            <button type="submit" class="panel-btn btn-primary" style="flex: 1; padding: 0; height: 48px; font-size: 15px; border-radius: 12px;">구역 저장</button>
+          </div>
+        </form>
+
+        <form id="password-form" class="hidden" onsubmit="return changePassword(event)" style="display: flex; flex-direction: column; flex: 1;">
+          
+          <div class="form-group">
+            <label>현재 비밀번호</label>
+            <div class="input-container">
+              <input type="password" id="current-password" placeholder="현재 비밀번호 입력" required />
+              <button type="button" class="password-toggle-btn" onclick="togglePagePassword('current-password', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>새 비밀번호</label>
+            <div class="input-container">
+              <input type="password" id="new-password" placeholder="새 비밀번호 (영문+숫자 8~10자)" required />
+              <button type="button" class="password-toggle-btn" onclick="togglePagePassword('new-password', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>새 비밀번호 확인</label>
+            <div class="input-container">
+              <input type="password" id="new-password-confirm" placeholder="새 비밀번호 재입력" required />
+              <button type="button" class="password-toggle-btn" onclick="togglePagePassword('new-password-confirm', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="edit-btn-group">
+            <button type="button" class="edit-cancel-btn" onclick="history.back();">취소</button>
+            <button type="submit" class="panel-btn btn-primary" style="flex: 1; padding: 0; height: 48px; font-size: 15px; border-radius: 12px;">비밀번호 변경</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/myPage.js"></script>
+  </body>
+</html>

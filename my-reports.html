@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>코리요 지킴이 - 순찰 기록</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/index.css" />
+    <link rel="stylesheet" href="css/subPage.css" />
+  </head>
+  <body class="index-page">
+    <div id="phone-frame" style="background-color: #f5f6f8;">
+      <div class="card-wrapper">
+        
+        <div class="page-header">
+          <h2>순찰 기록 보고서</h2>
+          <p>내가 작성한 실시간 완료 내역</p>
+        </div>
+
+        <!-- 💡 실시간 등록 데이터 리스트가 동적으로 꽂히는 영역 -->
+        <div class="report-list" id="dynamic-report-list">
+          <!-- 스크립트에 의해 카드가 여기에 렌더링됩니다 -->
+        </div>
+
+        <div class="back-btn-area">
+          <button type="button" class="panel-btn btn-primary" onclick="window.location.href='index.html';" style="width: 100%; height: 48px; padding: 0; font-size: 15px; border-radius: 12px; background-color: var(--text-sub);">
+            지도 화면으로 가기
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const reportListContainer = document.getElementById("dynamic-report-list");
+        
+        // 로컬스토리지에서 대원이 등록한 순찰 내역 배열 파싱
+        const savedReports = JSON.parse(localStorage.getItem("patrolReports")) || [];
+
+        // 데이터가 없는 경우 예외 디자인 처리
+        if (savedReports.length === 0) {
+          reportListContainer.innerHTML = `
+            <div style="text-align: center; color: #868e96; padding: 60px 0; font-size: 14px; line-height: 1.6;">
+              📋 아직 등록된 순찰 기록이 없습니다.<br>첫 순찰 활동을 마친 후 등록해 보세요!
+            </div>
+          `;
+          return;
+        }
+
+        // 축적된 데이터를 활용해 동적으로 HTML 카드 스트링 구성 후 삽입
+        reportListContainer.innerHTML = savedReports.map(report => {
+          const badgeClass = report.status === "이상 발견" ? "status-alert" : "status-success";
+          
+          return `
+            <div class="report-card" onclick="alert('보고서 상세조회 기능은 준비 중입니다.');">
+              <div class="report-top">
+                <span class="report-date">${report.date}</span>
+                <span class="status-badge ${badgeClass}">${report.status}</span>
+              </div>
+              <div class="report-mid">
+                <div>📍 순찰 구역: <span class="user-gu-txt">${report.zone}</span></div>
+                <div>⏱️ 소요 시간: <span>${report.time}</span></div>
+                <div style="font-size: 11px; color: #ff6f00; margin-top: 3px; font-weight: 500;">☀️ 기상 위험 환경: ${report.weather}</div>
+              </div>
+              <div class="report-bottom">📋 ${report.notes}</div>
+            </div>
+          `;
+        }).join('');
+      });
+    </script>
+  </body>
+</html>
