@@ -39,6 +39,117 @@ body.index-page {
 }
 
 /* ==========================================================================
+   우측 상단 원형 미니 프로필
+   ========================================================================== */
+#profile-area {
+    position: absolute;
+    top: calc(16px + env(safe-area-inset-top));
+    right: 16px;
+    z-index: 200;
+}
+
+#profile-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: var(--card-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: transform 0.12s ease;
+}
+
+#profile-btn:active {
+    transform: scale(0.94);
+}
+
+#profile-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+#profile-menu {
+    position: absolute;
+    top: 54px;
+    right: 0;
+    width: 200px;
+    background-color: var(--card-color);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    transform-origin: top right;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#profile-menu.hidden {
+    display: block !important;
+    opacity: 0;
+    transform: scale(0.92);
+    pointer-events: none;
+}
+
+.profile-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.profile-menu-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.profile-menu-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.profile-menu-name {
+    font-size: 15px;
+    color: var(--text-main);
+}
+
+.profile-menu-role {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.profile-menu-item {
+    display: block;
+    padding: 12px 14px;
+    font-size: 14px;
+    color: var(--text-main);
+    transition: background-color 0.15s ease;
+}
+
+.profile-menu-item + .profile-menu-item {
+    border-top: 1px solid var(--border-color);
+}
+
+.profile-menu-item:hover {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+}
+
+.profile-menu-item--danger {
+    color: var(--color-danger);
+}
+
+.profile-menu-item--danger:hover {
+    background-color: #fdecea;
+    color: var(--color-danger);
+}
+
+/* ==========================================================================
    하단 컨트롤 패널
    ========================================================================== */
 #bottom-panel {

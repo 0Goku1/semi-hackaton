@@ -11,6 +11,43 @@
     <div id="phone-frame">
       <div id="map"></div>
 
+      <!-- 우측 상단 원형 미니 프로필 -->
+      <div id="profile-area">
+        <button
+          id="profile-btn"
+          type="button"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-label="프로필 메뉴 열기"
+        >
+          <img
+            id="profile-avatar"
+            src="https://api.dicebear.com/7.x/initials/svg?seed=승우&backgroundColor=FF6F00"
+            alt="내 프로필"
+          />
+        </button>
+
+        <div id="profile-menu" class="hidden" role="menu">
+          <div class="profile-menu-header">
+            <img
+              class="profile-menu-avatar"
+              src="https://api.dicebear.com/7.x/initials/svg?seed=승우&backgroundColor=FF6F00"
+              alt=""
+            />
+            <div class="profile-menu-info">
+              <strong class="profile-menu-name">정승우</strong>
+              <span class="profile-menu-role">화성시 산불감시원</span>
+            </div>
+          </div>
+
+          <a href="myPage.html" class="profile-menu-item" role="menuitem">내 정보</a>
+          <a href="notifications.html" class="profile-menu-item" role="menuitem">알림</a>
+          <a href="settings.html" class="profile-menu-item" role="menuitem">설정</a>
+          <a href="support.html" class="profile-menu-item" role="menuitem">고객센터</a>
+          <a href="logout" class="profile-menu-item profile-menu-item--danger" role="menuitem">로그아웃</a>
+        </div>
+      </div>
+
       <!-- 가짜 로딩 오버레이 -->
       <div id="loading-overlay" class="hidden">
         <div class="spinner"></div>

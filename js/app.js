@@ -663,5 +663,43 @@ function setupPanelInteraction() {
 
 
 
+/* --------------------------------------------------------------------------
+   우측 상단 원형 프로필 메뉴 토글
+   -------------------------------------------------------------------------- */
+function setupProfileMenu() {
+  const profileBtn = document.getElementById("profile-btn");
+  const profileMenu = document.getElementById("profile-menu");
+  if (!profileBtn || !profileMenu) return;
+
+  const openMenu = () => {
+    profileMenu.classList.remove("hidden");
+    profileBtn.setAttribute("aria-expanded", "true");
+  };
+
+  const closeMenu = () => {
+    profileMenu.classList.add("hidden");
+    profileBtn.setAttribute("aria-expanded", "false");
+  };
+
+  profileBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const isOpen = profileBtn.getAttribute("aria-expanded") === "true";
+    isOpen ? closeMenu() : openMenu();
+  });
+
+  // 메뉴 바깥 클릭 시 닫기
+  document.addEventListener("click", (event) => {
+    if (!profileMenu.contains(event.target) && !profileBtn.contains(event.target)) {
+      closeMenu();
+    }
+  });
+
+  // ESC로 닫기
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+  });
+}
+
+setupProfileMenu();
 kakao.maps.load(initMap);
 
