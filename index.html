@@ -11,6 +11,13 @@
     <div id="phone-frame">
       <div id="map"></div>
 
+      <!-- 초기 지도 로딩 스플래시 -->
+      <div id="app-splash">
+        <div class="splash-icon">🔥</div>
+        <div class="spinner"></div>
+        <p class="splash-text">산불 위험 구역 확인 중...</p>
+      </div>
+
       <!-- 우측 상단 원형 미니 프로필 -->
       <div id="profile-area">
         <button
@@ -62,7 +69,8 @@
     </div>
 
     <script src="js/secrets.js"></script>
-    <script src="js/dummyData.js"></script>
+    <script src="js/dummyData.js?v=2"></script>
+    <script src="js/mapMarkers.js?v=2"></script>
     <script>
       const kakaoScript = document.createElement("script");
       kakaoScript.src =

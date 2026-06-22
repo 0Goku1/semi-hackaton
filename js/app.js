@@ -1,6 +1,9 @@
 const DEFAULT_CENTER = { lat: 37.1995, lng: 126.8312 }; // 위치 권한 거부 시 fallback (화성시청 부근)
 
-const TARGET_ZONE_ID = "DZ_001";
+// 1단계: 현재 위치 → 이 지점까지는 OSRM 도보 길찾기(실제 도로)
+const OSRM_VIA_ID = "DZ_001";
+// 2단계: 위 지점 → 경유지(SO_xxx) → 최종 도착지까지는 수동 실선
+const PATROL_DESTINATION_ID = "DZ_003";
 
 const ROUTE_COLOR = "#FF5722";
 
@@ -10,7 +13,7 @@ const MIN_LOADING_MS = 1500;
 
 let map;
 
-let routePolyline = null;
+let routeLines = []; // 경로 폴리라인 모음
 
 const mainUser = dummyUsers.find((user) => user.isMain) || dummyUsers[0];
 
@@ -100,12 +103,37 @@ async function initMap() {
 
   renderUsers();
 
-  renderDangerZones();
+  drawDangerZones();
 
   setupPanelInteraction();
 
   setupMapRelayout();
 
+  hideAppSplashWhenReady();
+
+}
+
+
+
+/* --------------------------------------------------------------------------
+   초기 스플래시("산불 위험 구역 확인 중") 숨김
+   - 지도 타일이 다 로드되면 자연스럽게 사라짐
+   - 혹시 이벤트가 안 오면 8초 후 강제로 숨김
+   -------------------------------------------------------------------------- */
+function hideAppSplashWhenReady() {
+  const splash = document.getElementById("app-splash");
+  if (!splash) return;
+
+  let hidden = false;
+  const hide = () => {
+    if (hidden) return;
+    hidden = true;
+    splash.classList.add("fade-out");
+    setTimeout(() => splash.remove(), 600);
+  };
+
+  kakao.maps.event.addListener(map, "tilesloaded", hide);
+  setTimeout(hide, 8000); // fallback
 }
 
 
@@ -141,305 +169,80 @@ function setupMapRelayout() {
    -------------------------------------------------------------------------- */
 
 function renderUsers() {
-
   dummyUsers.forEach((user) => {
-
     const position = new kakao.maps.LatLng(user.lat, user.lng);
-
-
-
-    if (user.isMain) {
-
-      new kakao.maps.Marker({ map, position, title: `${user.name} (나)` });
-
-      return;
-
-    }
-
-
-
-    const isPatrolling = user.status === "PATROLLING";
-
-    const pin = document.createElement("div");
-
-    pin.className = `member-pin ${isPatrolling ? "patrolling" : "resting"}`;
-
-    pin.title = `${user.name} (${isPatrolling ? "순찰중" : "휴식중"})`;
-
-
+    const content = user.isMain
+      ? createMeMarkerElement(getLoggedInUserName())
+      : createMemberMarkerElement(user);
 
     new kakao.maps.CustomOverlay({
-
       map,
-
       position,
-
-      content: pin,
-
+      content,
       xAnchor: 0.5,
-
       yAnchor: 0.5,
-
+      zIndex: user.isMain ? 4 : 3,
     });
-
   });
-
 }
 
 
 
 /* --------------------------------------------------------------------------
-
-   위험지역 마커 렌더링
-
+   위험지역 시각화 — 위험 구역 원(Circle) + 커스텀 라벨
+   dangerLevel(위험도 높음/중간/낮음)에 따라 반경·색상·테두리를 다르게 표현
    -------------------------------------------------------------------------- */
+const DANGER_LEVEL_KEY = {
+  "위험도 높음": "HIGH",
+  "위험도 중간": "MEDIUM",
+  "위험도 낮음": "LOW",
+  HIGH: "HIGH",
+  MEDIUM: "MEDIUM",
+  LOW: "LOW",
+};
 
-function renderDangerZones() {
+const DANGER_ZONE_STYLE = {
+  HIGH:   { radius: 300, color: "#ff3b30", strokeStyle: "solid" },
+  MEDIUM: { radius: 300, color: "#ff9500", strokeStyle: "solid" },
+  LOW:    { radius: 300, color: "#34c759", strokeStyle: "dashed" },
+};
 
-  dummyDangerZones.forEach((zone) => {
+function getDangerZoneStyle(dangerLevel) {
+  const key = DANGER_LEVEL_KEY[dangerLevel] || "LOW";
+  return DANGER_ZONE_STYLE[key];
+}
 
-    const pin = document.createElement("div");
+function drawDangerZones() {
+  dummyDangerZones.forEach((h) => {
+    const { radius, color, strokeStyle } = getDangerZoneStyle(h.dangerLevel);
+    const center = new kakao.maps.LatLng(h.lat, h.lng);
 
-    pin.className = `danger-pin ${zone.dangerLevel.toLowerCase()}`;
+    // 1) 위험 구역 원
+    const circle = new kakao.maps.Circle({
+      center,
+      radius,
+      strokeWeight: 2,
+      strokeColor: color,
+      strokeOpacity: 0.9,
+      strokeStyle,
+      fillColor: color,
+      fillOpacity: 0.18,
+    });
+    circle.setMap(map);
 
-    pin.title = `${zone.type} · ${zone.address}`;
+    // 2) 원 옆 라벨 — 타입 + 위험도(한글)
+    const labelHtml = `<div style="margin-left:14px; font-size:10px; font-weight:700; color:${color}; background:rgba(255,255,255,0.88); padding:3px 8px; border-radius:10px; border:1.5px solid ${color}44; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,0.15); pointer-events:none; line-height:1.35;">${h.type}<br><span style="font-size:9px; font-weight:800;">${h.dangerLevel}</span></div>`;
 
-
-
-    new kakao.maps.CustomOverlay({
-
-      map,
-
-      position: new kakao.maps.LatLng(zone.lat, zone.lng),
-
-      content: pin,
-
-      xAnchor: 0.5,
-
+    const label = new kakao.maps.CustomOverlay({
+      position: center,
+      content: labelHtml,
+      xAnchor: 0,
       yAnchor: 0.5,
-
+      clickable: false,
+      zIndex: 3,
     });
-
+    label.setMap(map);
   });
-
-}
-
-
-
-function getTargetZone() {
-
-  return dummyDangerZones.find((zone) => zone.id === TARGET_ZONE_ID);
-
-}
-
-
-
-/* --------------------------------------------------------------------------
-
-   도보 길찾기 API (카카오 → OSRM → fallback 순)
-
-   -------------------------------------------------------------------------- */
-
-async function fetchWalkingRoute(origin, destination) {
-
-  if (SECRETS.KAKAO_REST_KEY) {
-
-    try {
-
-      const kakaoRoute = await fetchKakaoWalkingRoute(origin, destination);
-
-      return { ...kakaoRoute, provider: "kakao" };
-
-    } catch (err) {
-
-      console.warn("[카카오 도보 길찾기 실패] OSRM으로 대체합니다.", err);
-
-    }
-
-  }
-
-
-
-  try {
-
-    const osrmRoute = await fetchOsrmWalkingRoute(origin, destination);
-
-    return { ...osrmRoute, provider: "osrm" };
-
-  } catch (err) {
-
-    console.warn("[OSRM 길찾기 실패] fallback 경로를 사용합니다.", err);
-
-  }
-
-
-
-  return {
-
-    path: buildFallbackRoute(origin, destination),
-
-    distance: estimateDistanceMeters(origin, destination),
-
-    duration: null,
-
-    provider: "fallback",
-
-  };
-
-}
-
-
-
-async function fetchKakaoWalkingRoute(origin, destination) {
-
-  const url = new URL("https://apis-navi.kakaomobility.com/affiliate/walking/v1/directions");
-
-  url.searchParams.set("origin", `${origin.lng},${origin.lat}`);
-
-  url.searchParams.set("destination", `${destination.lng},${destination.lat}`);
-
-  url.searchParams.set("priority", "DISTANCE");
-
-  url.searchParams.set("summary", "false");
-
-
-
-  const res = await fetch(url.toString(), {
-
-    headers: {
-
-      Authorization: `KakaoAK ${SECRETS.KAKAO_REST_KEY}`,
-
-      service: "hwaseong-patrol",
-
-    },
-
-  });
-
-
-
-  if (!res.ok) throw new Error(`Kakao API ${res.status}`);
-
-
-
-  const data = await res.json();
-
-  const route = data.routes?.[0];
-
-  if (!route || route.result_code !== 0) {
-
-    throw new Error(route?.result_message || "카카오 길찾기 결과 없음");
-
-  }
-
-
-
-  const path = [];
-
-  route.sections?.forEach((section) => {
-
-    section.roads?.forEach((road) => {
-
-      const vertexes = road.vertexes || [];
-
-      for (let i = 0; i < vertexes.length; i += 2) {
-
-        path.push({ lat: vertexes[i + 1], lng: vertexes[i] });
-
-      }
-
-    });
-
-  });
-
-
-
-  if (path.length < 2) throw new Error("카카오 경로 좌표 없음");
-
-
-
-  return {
-
-    path,
-
-    distance: route.summary?.distance ?? null,
-
-    duration: route.summary?.duration ?? null,
-
-  };
-
-}
-
-
-
-async function fetchOsrmWalkingRoute(origin, destination) {
-
-  const coords = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
-
-  const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
-
-
-
-  const res = await fetch(url);
-
-  if (!res.ok) throw new Error(`OSRM API ${res.status}`);
-
-
-
-  const data = await res.json();
-
-  const route = data.routes?.[0];
-
-  if (data.code !== "Ok" || !route) throw new Error("OSRM 경로 없음");
-
-
-
-  const path = route.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
-
-
-
-  return {
-
-    path,
-
-    distance: route.distance,
-
-    duration: route.duration,
-
-  };
-
-}
-
-
-
-function buildFallbackRoute(origin, destination) {
-
-  const points = [origin];
-
-  const steps = 12;
-
-
-
-  for (let i = 1; i < steps; i++) {
-
-    const t = i / steps;
-
-    const lat = origin.lat + (destination.lat - origin.lat) * t;
-
-    const lng = origin.lng + (destination.lng - origin.lng) * t;
-
-    const wave = Math.sin(t * Math.PI) * 0.0012 * (i % 2 === 0 ? 1 : -1);
-
-    points.push({ lat: lat + wave, lng: lng - wave * 0.6 });
-
-  }
-
-
-
-  points.push(destination);
-
-  return points;
-
 }
 
 
@@ -499,9 +302,7 @@ function buildRouteSummaryText(routeResult) {
 
 
   if (distanceText && durationText) return `${distanceText} · ${durationText}`;
-
   if (distanceText) return distanceText;
-
   return "";
 
 }
@@ -515,55 +316,128 @@ function buildRouteSummaryText(routeResult) {
    -------------------------------------------------------------------------- */
 
 async function drawRoute() {
-
-  const destination = getTargetZone();
-
-  if (!destination) return;
-
-
-
   const origin = { lat: mainUser.lat, lng: mainUser.lng };
+  const viaZone = dummyDangerZones.find((z) => z.id === OSRM_VIA_ID);
+  const destination = dummyDangerZones.find((z) => z.id === PATROL_DESTINATION_ID);
 
-  const routeResult = await fetchWalkingRoute(origin, destination);
+  clearRouteLines();
+  const allPoints = [];
+  let totalDistance = 0;
 
+  // 2단계 시작점 = OSRM이 실제로 끝난 지점 (없으면 viaZone 좌표)
+  let junction = viaZone ? { lat: viaZone.lat, lng: viaZone.lng } : origin;
 
+  // ── 1단계: 현재 위치 → DZ_001 (OSRM 도보 길찾기, 실제 도로 실선) ──
+  if (viaZone) {
+    try {
+      const osrm = await fetchOsrmRoute(origin, { lat: viaZone.lat, lng: viaZone.lng });
+      drawRouteLine(osrm.path, "solid", 6, 0.95);
+      osrm.path.forEach((p) => allPoints.push(p));
+      totalDistance += osrm.distance || 0;
+      // OSRM 경로의 마지막 좌표를 2단계 시작점으로 사용 → 끊김 없이 연결
+      if (osrm.path.length) junction = osrm.path[osrm.path.length - 1];
+    } catch (err) {
+      console.warn("[OSRM 실패] 현재위치→DZ_001 직선으로 대체", err);
+      const seg = [origin, { lat: viaZone.lat, lng: viaZone.lng }];
+      drawRouteLine(seg, "solid", 6, 0.95);
+      seg.forEach((p) => allPoints.push(p));
+      totalDistance += estimateDistanceMeters(seg[0], seg[1]);
+    }
+  }
 
-  if (routePolyline) routePolyline.setMap(null);
+  // ── 2단계: OSRM 종료지점 → 경유지(SO_001~) → DZ_003 (수동 주황 실선) ──
+  const manualPoints = [junction];
+  dummyWaypoints.forEach((w) => manualPoints.push({ lat: w.lat, lng: w.lng }));
+  if (destination) manualPoints.push({ lat: destination.lat, lng: destination.lng });
 
+  if (manualPoints.length >= 2) {
+    drawRouteLine(manualPoints, "solid", 6, 0.95);
+    manualPoints.forEach((p) => allPoints.push(p));
+    for (let i = 0; i < manualPoints.length - 1; i++) {
+      totalDistance += estimateDistanceMeters(manualPoints[i], manualPoints[i + 1]);
+    }
+  }
 
-
-  const path = routeResult.path.map((point) => new kakao.maps.LatLng(point.lat, point.lng));
-
-
-
-  routePolyline = new kakao.maps.Polyline({
-
-    path,
-
-    strokeWeight: 6,
-
-    strokeColor: ROUTE_COLOR,
-
-    strokeOpacity: 0.95,
-
-    strokeStyle: "solid",
-
-  });
-
-  routePolyline.setMap(map);
-
-
+  // 최종 도착지 마커만 표시 (경유지 핑 없음)
+  drawStopMarkers(destination);
 
   const bounds = new kakao.maps.LatLngBounds();
-
-  path.forEach((latlng) => bounds.extend(latlng));
-
+  allPoints.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
   map.setBounds(bounds);
 
+  // 전체 거리를 도보 4km/h 기준으로 환산한 예상 소요시간(초)
+  const estDuration = Math.round((totalDistance / 4000) * 3600);
 
+  return { distance: totalDistance, duration: estDuration };
+}
 
-  return routeResult;
+/* --------------------------------------------------------------------------
+   OSRM 도보 경로 (현재 위치 → 목적지, 실제 도로)
+   -------------------------------------------------------------------------- */
+async function fetchOsrmRoute(from, to) {
+  const coords = `${from.lng},${from.lat};${to.lng},${to.lat}`;
+  const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
 
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM API ${res.status}`);
+
+  const data = await res.json();
+  const route = data.routes?.[0];
+  if (data.code !== "Ok" || !route) throw new Error("OSRM 경로 없음");
+
+  return {
+    path: route.geometry.coordinates.map(([lng, lat]) => ({ lat, lng })),
+    distance: route.distance,
+    duration: route.duration,
+  };
+}
+
+/* --------------------------------------------------------------------------
+   경로 폴리라인 그리기 / 정리
+   -------------------------------------------------------------------------- */
+function drawRouteLine(points, strokeStyle, strokeWeight, strokeOpacity) {
+  const path = points.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
+  const line = new kakao.maps.Polyline({
+    path,
+    strokeWeight,
+    strokeColor: ROUTE_COLOR,
+    strokeOpacity,
+    strokeStyle,
+  });
+  line.setMap(map);
+  routeLines.push(line);
+}
+
+function clearRouteLines() {
+  routeLines.forEach((line) => line.setMap(null));
+  routeLines = [];
+}
+
+/* --------------------------------------------------------------------------
+   경유지 순번 마커 + 최종 도착지 마커
+   -------------------------------------------------------------------------- */
+let stopMarkerOverlays = [];
+
+function drawStopMarkers(destination) {
+  stopMarkerOverlays.forEach((overlay) => overlay.setMap(null));
+  stopMarkerOverlays = [];
+
+  // 경유지 핑은 표시하지 않음 (선만 보이게)
+
+  // 최종 도착지: 깃발 마커
+  if (destination) {
+    const flag = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:${ROUTE_COLOR}; color:#fff; font-size:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.35);"><span style="transform:rotate(45deg);">★</span></div>`;
+
+    const overlay = new kakao.maps.CustomOverlay({
+      map,
+      position: new kakao.maps.LatLng(destination.lat, destination.lng),
+      content: flag,
+      xAnchor: 0.5,
+      yAnchor: 1,
+      zIndex: 6,
+    });
+    stopMarkerOverlays.push(overlay);
+  }
 }
 
 
@@ -669,9 +543,7 @@ function setupPanelInteraction() {
    - 값이 없으면 메인 더미 사용자 → 그래도 없으면 "사용자"
    -------------------------------------------------------------------------- */
 function getLoggedInUserName() {
-  const stored = localStorage.getItem("user_name");
-  if (stored && stored.trim()) return stored.trim();
-  return mainUser?.name || "사용자";
+  return getDisplayUserName(mainUser?.name);
 }
 
 function applyProfileUser() {
@@ -740,7 +612,8 @@ function setupProfileMenu() {
    로그아웃 — 로그인 세션 정리 후 login.html 이동
    -------------------------------------------------------------------------- */
 function logout() {
-  localStorage.removeItem("user_name");
+  localStorage.removeItem("signup-name");
+  localStorage.removeItem("currentUser");
   sessionStorage.clear();
   window.location.href = "login.html";
 }
