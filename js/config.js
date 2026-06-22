@@ -4,8 +4,8 @@
 // ============================================================
 
 const CONFIG = {
-  // 카카오 JavaScript 키
-  KAKAO_JS_KEY: "54d9489a11c79a2caf8b4de2be184642",
+  // 카카오 JavaScript 키 (js/secrets.js 에서 로드)
+  KAKAO_JS_KEY: SECRETS.KAKAO_JS_KEY,
 
   // 화성시 좌표 (지도 초기 중심점)
   MAP_CENTER: {
