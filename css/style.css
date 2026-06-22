@@ -1,0 +1,32 @@
+/* ============================================================
+   커스텀 스타일 (Tailwind로 표현하기 애매한 부분만 여기에)
+   ============================================================ */
+
+/* 모바일 앱처럼 보이도록: 화면 전체를 꽉 채우고 스크롤 방지 */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  /* 모바일 시스템 폰트 우선 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+
+/* 지도가 들어갈 영역은 부모 크기를 100% 채워야 카카오맵이 그려집니다 */
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* 데스크톱에서도 '모바일 기기'처럼 가운데 좁게 보이도록 하는 프레임 */
+.app-frame {
+  width: 100%;
+  max-width: 430px; /* 아이폰 Pro Max 폭 기준 */
+  height: 100%;
+  margin: 0 auto;
+  position: relative;
+  background: #fff;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 모바일 반응형 핵심: 기기 너비에 맞추고 확대/축소 제한 -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>화성시 산불감시 - 최적 순찰 노선</title>
+
+    <!-- Tailwind CSS (CDN: 설치 없이 바로 사용) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 커스텀 스타일 -->
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+
+  <body class="bg-gray-200">
+    <!-- 데스크톱에서도 모바일 폰처럼 보이게 하는 프레임 -->
+    <div class="app-frame">
+      <!-- ===== 상단 헤더 바 ===== -->
+      <header
+        class="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/60 to-transparent px-4 pt-4 pb-8 text-white"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🔥</span>
+          <div>
+            <h1 class="text-base font-bold leading-tight">화성시 산불감시</h1>
+            <p class="text-[11px] text-gray-200">실시간 위험도 · 최적 순찰 노선</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- ===== 지도 영역 (전체 화면) ===== -->
+      <div id="map"></div>
+
+      <!-- ===== 하단 정보 패널 (스텝 4에서 채워나갈 자리) ===== -->
+      <div
+        class="absolute bottom-0 left-0 right-0 z-20 rounded-t-2xl bg-white px-5 pt-4 pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]"
+      >
+        <!-- 드래그 핸들 느낌의 작은 바 -->
+        <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300"></div>
+
+        <p class="text-xs font-semibold text-gray-400">오늘의 한 줄 지침</p>
+        <p class="mt-1 text-sm font-medium text-gray-800">
+          🌤️ 건조주의보 발효 중 — 북동부 임야 집중 순찰 권장
+        </p>
+
+        <button
+          class="mt-4 w-full rounded-xl bg-orange-500 py-3 text-sm font-bold text-white active:scale-[0.98] transition"
+        >
+          순찰 시작하기
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== 스크립트 로딩 순서 중요 ===== -->
+    <!-- 1) 설정값 먼저 -->
+    <script src="js/config.js"></script>
+
+    <!-- 2) 카카오맵 SDK (autoload=false: 우리가 직접 load 시점 제어) -->
+    <!--    아래 appkey 부분은 config.js의 키를 동적으로 끼워넣습니다 -->
+    <script>
+      const kakaoScript = document.createElement("script");
+      kakaoScript.src =
+        "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
+        CONFIG.KAKAO_JS_KEY +
+        "&autoload=false";
+      kakaoScript.onload = function () {
+        // SDK 로드 완료 후 app.js 실행
+        const appScript = document.createElement("script");
+        appScript.src = "js/app.js";
+        document.body.appendChild(appScript);
+      };
+      document.head.appendChild(kakaoScript);
+    </script>
+  </body>
+</html>
