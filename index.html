@@ -5,11 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>지도</title>
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/index.css" />
   </head>
-  <body>
-    <div id="map"></div>
+  <body class="index-page">
+    <div id="phone-frame">
+      <div id="map"></div>
+
+      <!-- 가짜 로딩 오버레이 -->
+      <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p class="loading-text">최적 동선 계산 중...</p>
+      </div>
+
+      <!-- 하단 컨트롤 패널 -->
+      <div id="bottom-panel">
+        <h2 id="panel-title">순찰 대기 상태</h2>
+        <button id="action-btn" class="panel-btn btn-primary">동선 찾기</button>
+      </div>
+    </div>
 
     <script src="js/secrets.js"></script>
+    <script src="js/dummyData.js"></script>
     <script>
       const kakaoScript = document.createElement("script");
       kakaoScript.src =
