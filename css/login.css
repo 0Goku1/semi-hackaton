@@ -1,0 +1,168 @@
+/* =================================================== */
+/* [최종 모바일 핏] 코리요 지킴이 통합 디자인 (login.css) */
+/* =================================================== */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+body.report-body {
+    background-color: #F5F5F7 !important; /* 전체 화면 배경 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* 📱 모바일 디바이스 프레임 고정 */
+.mobile-container {
+    width: 100%;
+    max-width: 390px;  
+    height: 100vh;     
+    max-height: 844px; 
+    background: #FFFFFF !important; 
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+    border: 1px solid #E2E8F0;
+    border-radius: 24px; 
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px 24px;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+/* 🦖 코리요 이미지 로고 영역 배치 정렬 */
+.logo-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 36px;
+    text-align: center;
+}
+
+/* 이미지를 감싸는 서클 박스 */
+.logo-image-box {
+    width: 130px;
+    height: 130px;
+    background: #FFFFFF;
+    border: 2px solid var(--koriyo-orange);
+    border-radius: 50%; 
+    overflow: hidden;    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 6px 16px rgba(255, 107, 0, 0.12);
+    margin-bottom: 12px;
+}
+
+/* 일러스트 찌그러짐 없이 원에 채우기 */
+.main-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; 
+}
+
+/* 로고 타이틀 텍스트 */
+.logo-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--forest-gray);
+    letter-spacing: -0.5px;
+    margin-top: 4px;
+}
+
+.logo-title .orange-txt {
+    color: var(--koriyo-orange);
+}
+
+/* 📋 입력창 스타일 */
+.login-form {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.input-group {
+    margin-bottom: 12px;
+}
+
+.input-group input {
+    width: 100%;
+    height: 54px;
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 15px;
+    background-color: var(--hs-gray-light);
+    color: var(--forest-gray);
+    transition: all 0.2s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--koriyo-orange);
+    background-color: #FFFFFF;
+}
+
+/* 🚀 로그인 / 가입 버튼 (무조건 상시 노출 오렌지색 고정) */
+.btn-login {
+    display: block !important;
+    width: 100% !important;
+    height: 54px !important;
+    background-color: #FF6B00 !important; 
+    color: #FFFFFF !important;            
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    margin-top: 20px !important;
+    opacity: 1 !important;                 
+    visibility: visible !important;        
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.2) !important; 
+    transition: all 0.2s ease;
+}
+
+.btn-login:hover {
+    background-color: #E05E00 !important;
+    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3) !important;
+}
+
+/* 🔗 하단 이동 링크 링크 */
+.signup-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 8px;
+}
+
+/* 🏢 구청/지역 선택창 전용 스타일 추가 */
+.select-box {
+    width: 100%;
+    height: 54px;
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 15px;
+    background-color: var(--hs-gray-light);
+    color: var(--forest-gray);
+    outline: none;
+    cursor: pointer;
+    /* 브라우저 기본 화살표 세련되게 다듬기 */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 4 5'><path fill='%23666' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.select-box:focus {
+    border-color: var(--koriyo-orange) !important;
+    background-color: #FFFFFF;
+}
