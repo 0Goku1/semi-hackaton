@@ -92,3 +92,79 @@ button {
 }
 
 /* 이 아래에서 각 페이지·컴포넌트별 스타일을 추가하세요 */
+
+/* =================================================== */
+/* 여기서부터 정빈이 순찰기록 페이지(patrol-report) 전용 스타일 */
+/* 순찰기록 페이지 전용 스타일 */
+
+.report-body {
+    background-color: #FDFBF7; /* 말랑한 코리요 모래색 바탕 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    font-family: 'Pretendard', sans-serif;
+}
+
+.report-container {
+    background: #ffffff;
+    max-width: 500px;
+    width: 100%;
+    padding: 30px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    border-radius: 20px !important; /* 귀엽게 둥글게 */
+}
+
+.report-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid var(--koriyo-orange);
+    padding-bottom: 12px;
+    margin-bottom: 15px;
+}
+
+.report-desc {
+    font-size: 14px;
+    color: var(--hs-gray-medium);
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--hs-gray-dark);
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 14px;
+    background-color: var(--hs-gray-light);
+    font-family: inherit;
+}
+
+.form-group textarea {
+    resize: none; /* 크기 조절 비활성화 */
+}
+
+/* 제출 버튼 커스텀 */
+#btn-submit-report {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+

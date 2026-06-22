@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>코리요 불조심 대작전 - 순찰 기록 보고서</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="report-body">
+
+    <div class="report-container koriyo-card">
+        <div class="report-header">
+            <span class="title-main">🦖 코리요</span>
+            <span class="title-sub">순찰 기록 보고서</span>
+        </div>
+        
+        <p class="report-desc">오늘도 화성시 산림을 안전하게 지켜 주셔서 감사합니다. 순찰 내용을 기록해 주세요.</p>
+
+        <div class="report-form">
+            <div class="form-group">
+                <label for="patrol-time">⏱️ 동선 소요 시간 (자동 기록)</label>
+                <input type="text" id="patrol-time" readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold; color: var(--hs-orange-main);">
+            </div>
+
+            <div class="form-group">
+                <label for="weather-status">☀️ 현장 기상 및 산불 위험 환경</label>
+                <select id="weather-status">
+                    <option value="단계1">🟢 1단계: 맑음 (실효습도 50% 이상, 바람 잔잔)</option>
+                    <option value="단계2">🟡 2단계: 구름많음 (실효습도 40%대, 낙엽 약간 건조)</option>
+                    <option value="단계3">🟠 3단계: 당일 건조주의보 (실효습도 35% 이하, 주의 요망)</option>
+                    <option value="단계4">🔴 4단계: 건조경보 + 강풍 (산불 발생 시 대형 확산 위험 ⚠️)</option>
+                    <option value="단계5">🚨 5단계: 돌발 기후 (인근 마른하늘 번개 또는 강한 돌풍 발생)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="patrol-notes">순찰 기록 및 특이사항</label>
+                <textarea id="patrol-notes" rows="6" placeholder="기상 상황이나 인근 주민 계도 사항, 혹은 인근 탄내 여부 등 특이사항을 적어 주세요."></textarea>
+            </div>
+
+            <button id="btn-submit-report" class="btn-hs-primary">순찰 기록 등록</button>
+        </div>
+    </div>
+
+    <script src="js/report.js"></script>
+</body>
+</html>
