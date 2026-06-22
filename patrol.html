@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>순찰 진행 중 — 화성시 산불감시</title>
+  <link rel="stylesheet" href="css/patrol.css">
+</head>
+<body>
+
+  <div class="app-frame">
+
+    <div id="map"></div>
+
+    <!-- 헤더 오버레이 -->
+    <header class="header">
+      <div class="header-row">
+        <button class="btn-back-header" onclick="window.location.href='index.html'">‹</button>
+        <div class="header-icon">🌲</div>
+        <div>
+          <div class="header-title">순찰 진행 중</div>
+          <div class="header-sub">화성시 산불감시 · 3구역 팔탄면</div>
+        </div>
+        <div class="status-badge status-active" id="statusBadge">● 순찰중</div>
+      </div>
+    </header>
+
+    <!-- 하단 패널 -->
+    <div class="btm">
+      <div class="btm-inner">
+        <div class="drag-handle"></div>
+        <div class="sec-label">순찰 경과 시간</div>
+        <div class="timer-display">
+          <div class="timer-value" id="timerDisplay">00:00:00</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btnStandby" onclick="toggleStandby()">
+            ⏸ 순찰 대기
+          </button>
+          <button class="btn btn-fire" id="btnEnd" onclick="endPatrol()">
+            🔴 순찰 종료
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- dummyData 먼저 로드 → patrol-app.js 에서 변수 참조 가능 -->
+  <script src="js/dummyData.js"></script>
+  <script src="js/secrets.js"></script>
+  <script>
+    const kakaoScript = document.createElement("script");
+    kakaoScript.src =
+      "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
+      SECRETS.KAKAO_JS_KEY +
+      "&autoload=false";
+    kakaoScript.onload = function () {
+      const appScript = document.createElement("script");
+      appScript.src = "js/patrol-app.js";
+      document.body.appendChild(appScript);
+    };
+    document.head.appendChild(kakaoScript);
+  </script>
+</body>
+</html>

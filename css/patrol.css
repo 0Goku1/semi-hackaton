@@ -1,0 +1,151 @@
+/* ==========================================================
+   patrol.css  —  순찰 페이지 전용 스타일
+   ========================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: #1a1a2e;
+}
+
+/* ── 앱 프레임 ── */
+.app-frame {
+  width: 100%; max-width: 430px; height: 100%;
+  margin: 0 auto; position: relative;
+  background: white; box-shadow: 0 0 60px rgba(0,0,0,0.5); overflow: hidden;
+}
+
+/* ── 지도 ── */
+#map { position: absolute; inset: 0; z-index: 1; }
+
+/* ── 헤더 오버레이 ── */
+.header {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%);
+  padding: 16px 16px 40px;
+  color: white;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 헤더 뒤로가기 버튼 */
+.btn-back-header {
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,0.18);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.btn-back-header:active { background: rgba(255,255,255,0.35); }
+
+.header-icon {
+  width: 38px; height: 38px;
+  background: rgba(255,107,53,0.9);
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+
+.header-title { font-size: 16px; font-weight: 800; }
+.header-sub   { font-size: 11px; color: rgba(255,255,255,0.72); margin-top: 1px; }
+
+.status-badge {
+  margin-left: auto;
+  font-size: 10px; font-weight: 700;
+  padding: 5px 10px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.status-active  { background: rgba(52,199,89,0.9);  color: white; }
+.status-standby { background: rgba(255,149,0,0.9);  color: white; }
+
+/* ── 하단 패널 ── */
+.btm {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+  background: white; border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 28px rgba(0,0,0,0.13); overflow: hidden;
+}
+.btm-inner { padding: 12px 20px 40px; }
+
+.drag-handle {
+  width: 40px; height: 4px; background: #e0e0e0;
+  border-radius: 2px; margin: 0 auto 18px;
+}
+
+.sec-label {
+  font-size: 11px; font-weight: 700;
+  color: #b0b0b0; letter-spacing: 0.8px;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+
+/* ── 타이머 ── */
+.timer-display { text-align: center; margin-bottom: 20px; }
+
+.timer-value {
+  font-size: 52px; font-weight: 900;
+  letter-spacing: -1px; line-height: 1;
+  /* tabular-nums: 숫자 너비 고정 → 카운트 중 흔들림 방지 */
+  font-variant-numeric: tabular-nums;
+  color: #1a1a1a;
+}
+
+/* ── 버튼 ── */
+.btn-row { display: flex; gap: 10px; }
+
+.btn {
+  flex: 1; border: none; border-radius: 14px; padding: 15px;
+  font-size: 15px; font-weight: 800; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; letter-spacing: -0.3px;
+  transition: transform 0.1s;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-ghost { background: #f0f0f0; color: #333; }
+
+.btn-standby-on {
+  background: linear-gradient(135deg, #ff9500, #ff6b35);
+  color: white;
+}
+
+.btn-fire {
+  background: linear-gradient(135deg, #ff6b35, #ff3b30);
+  color: white;
+}
+
+.btn:disabled {
+  background: #ececec !important;
+  color: #bbb !important;
+  cursor: default;
+  transform: none !important;
+}
+
+/* ── 내 위치 점 (GPS 실시간) ──────────────────────────────
+   파란 원 + 맥박 애니메이션.
+   box-shadow 로 pulsing ring 을 표현합니다.
+   CustomOverlay content 안에 이 클래스를 넣으면 됩니다. */
+@keyframes location-pulse {
+  0%   { box-shadow: 0 0 0 0px  rgba(0,122,255,0.45), 0 2px 6px rgba(0,0,0,0.3); }
+  70%  { box-shadow: 0 0 0 10px rgba(0,122,255,0),    0 2px 6px rgba(0,0,0,0.3); }
+  100% { box-shadow: 0 0 0 0px  rgba(0,122,255,0),    0 2px 6px rgba(0,0,0,0.3); }
+}
+
+.my-location-dot {
+  width: 16px; height: 16px;
+  background: #007aff;
+  border: 3px solid white;
+  border-radius: 50%;
+  animation: location-pulse 2s ease-out infinite;
+}
