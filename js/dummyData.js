@@ -10,20 +10,38 @@ const dummyDangerZones = [
   },
   {
       id: "DZ_002",
-      type: "건조 경보 지역",     
-      lat: 37.2172364753542,     
-      lng: 127.00460015885409,     
-      dangerLevel: "위험도 중간",       
+      type: "건조 경보 지역",
+      lat: 37.2172364753542,
+      lng: 127.00460015885409,
+      dangerLevel: "위험도 중간",
       address: "경기 화성시 병점구 송산동 184-12",
       description: "건조 경보 지역"
   },
   {
     id: "DZ_003",
-    type: "산불 위험 구역",     
-    lat: 37.2140726845749,     
-    lng: 126.933003172514,     
-    dangerLevel: "위험도 낮음",       
+    type: "산불 위험 구역",
+    lat: 37.2140726845749,
+    lng: 126.933003172514,
+    dangerLevel: "위험도 낮음",
     address: "경기도 화성시 효행구 봉담읍 상리 산82",
+    description: "산불 주의 구역"
+  },
+  {
+    id: "DZ_004",
+    type: "흡연 민원 구역",
+    lat: 37.228280924760135,
+    lng: 126.96809956259591,
+    dangerLevel: "위험도 낮음",
+    address: "경기 화성시 동탄·병점 인접 산림",
+    description: "건조 경보 지역"
+  },
+  {
+    id: "DZ_005",
+    type: "논밭두렁 소각 민원 구역",
+    lat: 37.20708885764981,
+    lng: 126.97045162691263,
+    dangerLevel: "위험도 중간",
+    address: "경기 화성시 동탄·병점 인접 산림",
     description: "산불 주의 구역"
   },
 ];
@@ -74,6 +92,22 @@ const dummyDangerZones = [
       isMain: false,
       lat: 37.224391702598055,
       lng: 126.98467595639282,
-      status: "WAITING",        // 대기중
+      status: "WAITING"          // 대기중
+    },
+    {
+      id: "USER_004",
+      name: "상범",
+      isMain: false,
+      lat: 37.22727069835462,
+      lng: 126.96440404905255,
+      status: "WAITING"          // 대기중 (파란 마커)
+    },
+    {
+      id: "USER_005",
+      name: "서현",
+      isMain: false,
+      lat: 37.2112695264446,
+      lng: 126.96963886440886,
+      status: "PATROLLING"       // 순찰중 (회색 마커)
     }
   ];

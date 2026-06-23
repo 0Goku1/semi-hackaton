@@ -12,17 +12,11 @@ function getProfileAvatarUrl(name) {
 function getGivenName(name) {
   if (!name) return "";
   const trimmed = name.trim();
-  return trimmed.length > 1 ? trimmed.slice(1) : trimmed;
+  return trimmed.length >= 3 ? trimmed.slice(1) : trimmed;
 }
 
-function getMemberAvatarUrl(name, isPatrolling) {
-  const bg = isPatrolling ? "9E9E9E" : "1E88E5";
-  return (
-    "https://api.dicebear.com/7.x/initials/svg?backgroundColor=" +
-    bg +
-    "&seed=" +
-    encodeURIComponent(getGivenName(name) || "member")
-  );
+function getMemberMarkerColor(isPatrolling) {
+  return isPatrolling ? "#9E9E9E" : "#1E88E5";
 }
 
 function getDisplayUserName(fallbackName) {
@@ -60,16 +54,22 @@ function createMeMarkerElement(displayName) {
 
 function createMemberMarkerElement(user) {
   const isPatrolling = user.status === "PATROLLING";
-  const statusLabel = isPatrolling ? "순찰중" : "대기중";
+  const statusLabel = isPatrolling ? "순찰 중" : "대기 중";
   const statusClass = isPatrolling ? "patrolling" : "resting";
 
   const wrap = document.createElement("div");
   wrap.className = `map-marker map-marker-member map-marker-member--${statusClass}`;
-  wrap.title = `${user.name} (${statusLabel})`;
 
-  wrap.appendChild(
-    createAvatarImg(getMemberAvatarUrl(user.name, isPatrolling), user.name)
-  );
+  const label = document.createElement("span");
+  label.className = "map-marker-member-name";
+  label.textContent = getGivenName(user.name);
+  label.style.backgroundColor = getMemberMarkerColor(isPatrolling);
+  wrap.appendChild(label);
+
+  const tooltip = document.createElement("span");
+  tooltip.className = "map-marker-member-tooltip";
+  tooltip.textContent = statusLabel;
+  wrap.appendChild(tooltip);
 
   return wrap;
 }

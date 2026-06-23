@@ -157,6 +157,7 @@ function renderUsers() {
       xAnchor: 0.5,
       yAnchor: 0.5,
       zIndex: user.isMain ? 4 : 3,
+      clickable: !user.isMain,
     });
   });
 }

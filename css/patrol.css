@@ -1,20 +1,5 @@
 /* 순찰 페이지 */
 
-   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-   html, body {
-     height: 100%; overflow: hidden;
-     font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-     background: #F5F5F7;
-   }
-   
-   /* 앱 프레임 */
-   .app-frame {
-     width: 100%; max-width: 430px; height: 100%;
-     margin: 0 auto; position: relative;
-     background: white; box-shadow: 0 0 60px rgba(0,0,0,0.5); overflow: hidden;
-   }
-   
 /* 지도 */
 #map { position: absolute; inset: 0; z-index: 1; }
 
