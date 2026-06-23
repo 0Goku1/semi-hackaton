@@ -1,22 +1,20 @@
 @charset "UTF-8";
 
-/* ==========================================================================
-   📱 코리요 지킴이 서브 페이지 공통 카드 레이아웃 (로그인 화면 핏 반영)
-   ========================================================================== */
+/* 서브 페이지 공통 카드 레이아웃 */
 
 .card-wrapper {
   position: absolute;
-  inset: 16px; /* 모바일 프레임 사방 여백 */
+  inset: 16px;
   background-color: var(--card-color, #ffffff);
-  border-radius: 24px; /* 로그인 박스와 동일한 부드러운 라운드 */
+  border-radius: 24px;
   padding: 24px 16px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05); /* 은은한 그림자 */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
 }
 
-/* 상단 헤더 타이포그래피 */
+/* 페이지 헤더 */
 .page-header, .edit-header {
   text-align: center;
   margin-bottom: 20px;
@@ -32,11 +30,9 @@
   margin-top: 4px;
 }
 
-/* ==========================================================================
-   🔒 1. 내 정보 관리 (myPage.html) 전용 스타일
-   ========================================================================== */
+/* 내 정보 전용 스타일 */
 
-/* 구역 수정 / 비밀번호 변경 탭 전환 버튼 구조 */
+/* 구역·비밀번호 탭 */
 .tab-group {
   display: flex;
   background-color: #f1f3f5;
@@ -62,7 +58,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-/* 로그인 화면 인풋창 규격 완벽 복사 */
+/* 폼 입력 */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -94,7 +90,7 @@
   cursor: not-allowed;
 }
 
-/* 보고서 보러가기 배너 링크 */
+/* 보고서 배너 */
 .report-link-banner {
   margin-top: 10px;
   padding: 14px;
@@ -109,9 +105,9 @@
   text-decoration: none;
 }
 
-/* 하단 버튼 정렬 레이아웃 */
+/* 하단 버튼 */
 .edit-btn-group, .back-btn-area {
-  margin-top: auto; /* 하단으로 밀착 */
+  margin-top: auto;
 }
 .edit-btn-group {
   display: flex;
@@ -129,9 +125,7 @@
   cursor: pointer;
 }
 
-/* ==========================================================================
-   🔔 2. 알림 센터 (notifications.html) 전용 스타일
-   ========================================================================== */
+/* 알림 센터 전용 스타일 */
 
 .notification-list {
   flex: 1;
@@ -175,9 +169,7 @@
 .noti-title { font-size: 14px; font-weight: 700; color: var(--text-main, #212529); }
 .noti-desc { font-size: 13px; color: var(--text-sub, #495057); line-height: 1.4; }
 
-/* ==========================================================================
-   📝 3. 순찰 기록 보고서 (my-reports.html) 전용 스타일
-   ========================================================================== */
+/* 순찰 기록 목록 전용 스타일 */
 
 .report-list {
   flex: 1;

@@ -1,6 +1,4 @@
-/* ==========================================================================
-   index.html 전용 스타일
-   ========================================================================== */
+/* index.html */
 
 /* 데스크톱: 휴대폰 프레임 미리보기 레이아웃 */
 body.index-page {
@@ -12,9 +10,7 @@ body.index-page {
     padding: 16px;
 }
 
-/* ==========================================================================
-   모바일 프레임 (9:16 비율)
-   ========================================================================== */
+/* 모바일 프레임 */
 #phone-frame {
     position: relative;
     width: min(100%, calc((100dvh - 32px) * 9 / 16));
@@ -28,9 +24,7 @@ body.index-page {
         0 24px 48px rgba(0, 0, 0, 0.45);
 }
 
-/* ==========================================================================
-   지도
-   ========================================================================== */
+/* 지도 */
 #map {
     position: absolute;
     inset: 0;
@@ -38,9 +32,7 @@ body.index-page {
     height: 100%;
 }
 
-/* ==========================================================================
-   우측 상단 원형 미니 프로필
-   ========================================================================== */
+/* 프로필 */
 #profile-area {
     position: absolute;
     top: calc(16px + env(safe-area-inset-top));
@@ -149,9 +141,7 @@ body.index-page {
     color: var(--color-danger);
 }
 
-/* ==========================================================================
-   하단 컨트롤 패널
-   ========================================================================== */
+/* 하단 패널 */
 #bottom-panel {
     position: absolute;
     left: 0;
@@ -214,9 +204,7 @@ body.index-page {
     background-color: #1b5e20;
 }
 
-/* ==========================================================================
-   가짜 로딩 오버레이 + 스피너
-   ========================================================================== */
+/* 로딩 오버레이 */
 #loading-overlay {
     position: absolute;
     inset: 0;
@@ -257,9 +245,7 @@ body.index-page {
     }
 }
 
-/* ==========================================================================
-   초기 지도 로딩 스플래시
-   ========================================================================== */
+/* 초기 스플래시 */
 #app-splash {
     position: absolute;
     inset: 0;
@@ -294,9 +280,7 @@ body.index-page {
     50% { transform: scale(1.15); }
 }
 
-/* ==========================================================================
-   지도 마커 (DiceBear 이니셜 아바타)
-   ========================================================================== */
+/* 지도 마커 */
 .map-marker {
     pointer-events: none;
 }
@@ -348,7 +332,7 @@ body.index-page {
     border-radius: 50%;
 }
 
-/* 위험지역은 app.js의 drawDangerZones()에서 Circle + 커스텀 라벨로 표현 */
+/* 위험지역 — app.js drawDangerZones */
 
 /* 실제 휴대폰에서는 프레임 없이 전체 화면 */
 @media (max-width: 480px) and (orientation: portrait) {
@@ -367,20 +351,20 @@ body.index-page {
     }
 }
 
-/* 1. 우측 상단 미니 프로필 강제 변경 */
+/* 프로필 아바타 */
 #profile-avatar {
-    content: url("../images/markers/me.png") !important; /* 옛날 HTML 이미지 주소를 무시하고 코리요로 강제 교체 */
+    content: url("../images/markers/me.png") !important;
     object-fit: contain !important;
     background-color: #ffffff !important;
     box-sizing: border-box !important;
 }
 
-/* 2. 드롭다운 메뉴 안의 큰 프로필 강제 변경 */
+/* 프로필 메뉴 아바타 */
 .profile-menu-avatar {
     content: url("../images/markers/me.png") !important;
     object-fit: contain !important;
     background-color: #ffffff !important;
-    border: 2px solid #ff6f00 !important; /* 깔끔하게 주황색 테두리 적용 */
+    border: 2px solid #ff6f00 !important;
     box-sizing: border-box !important;
     padding: 2px !important;
 }

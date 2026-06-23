@@ -14,11 +14,7 @@ const mainUser = dummyUsers.find((user) => user.isMain) || dummyUsers[0];
 
 
 
-/* --------------------------------------------------------------------------
-
-   현재 위치 가져오기 (실패 시 기본 좌표)
-
-   -------------------------------------------------------------------------- */
+/* 현재 위치 가져오기 (실패 시 기본 좌표) */
 
 function getMyPosition() {
 
@@ -66,11 +62,7 @@ function getMyPosition() {
 
 
 
-/* --------------------------------------------------------------------------
-
-   지도 초기화 (USER_001 위치 = 현재 위치)
-
-   -------------------------------------------------------------------------- */
+/* 지도 초기화 (USER_001 위치 = 현재 위치) */
 
 async function initMap() {
 
@@ -110,11 +102,7 @@ async function initMap() {
 
 
 
-/* --------------------------------------------------------------------------
-   초기 스플래시("산불 위험 구역 확인 중") 숨김
-   - 지도 타일이 다 로드되면 자연스럽게 사라짐
-   - 혹시 이벤트가 안 오면 8초 후 강제로 숨김
-   -------------------------------------------------------------------------- */
+/* 초기 스플래시("산불 위험 구역 확인 중") 숨김 */
 function hideAppSplashWhenReady() {
   const splash = document.getElementById("app-splash");
   if (!splash) return;
@@ -133,11 +121,7 @@ function hideAppSplashWhenReady() {
 
 
 
-/* --------------------------------------------------------------------------
-
-   프레임 크기 변경 시 카카오맵 리사이즈
-
-   -------------------------------------------------------------------------- */
+/* 프레임 크기 변경 시 카카오맵 리사이즈 */
 
 function setupMapRelayout() {
 
@@ -157,11 +141,7 @@ function setupMapRelayout() {
 
 
 
-/* --------------------------------------------------------------------------
-
-   사용자 마커 렌더링
-
-   -------------------------------------------------------------------------- */
+/* 사용자 마커 렌더링 */
 
 function renderUsers() {
   dummyUsers.forEach((user) => {
@@ -183,10 +163,7 @@ function renderUsers() {
 
 
 
-/* --------------------------------------------------------------------------
-   위험지역 시각화 — 위험 구역 원(Circle) + 커스텀 라벨
-   dangerLevel(위험도 높음/중간/낮음)에 따라 반경·색상·테두리를 다르게 표현
-   -------------------------------------------------------------------------- */
+/* 위험지역 시각화 — Circle + 커스텀 라벨 */
 const DANGER_LEVEL_KEY = {
   "위험도 높음": "HIGH",
   "위험도 중간": "MEDIUM",
@@ -212,7 +189,7 @@ function drawDangerZones() {
     const { radius, color, strokeStyle } = getDangerZoneStyle(h.dangerLevel);
     const center = new kakao.maps.LatLng(h.lat, h.lng);
 
-    // 1) 위험 구역 원
+    // 위험 구역 원
     const circle = new kakao.maps.Circle({
       center,
       radius,
@@ -225,7 +202,7 @@ function drawDangerZones() {
     });
     circle.setMap(map);
 
-    // 2) 원 옆 라벨 — 타입 + 위험도(한글)
+    // 구역 라벨
     const labelHtml = `<div style="margin-left:14px; font-size:10px; font-weight:700; color:${color}; background:rgba(255,255,255,0.88); padding:3px 8px; border-radius:10px; border:1.5px solid ${color}44; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,0.15); pointer-events:none; line-height:1.35;">${h.type}<br><span style="font-size:9px; font-weight:800;">${h.dangerLevel}</span></div>`;
 
     const label = new kakao.maps.CustomOverlay({
@@ -304,29 +281,21 @@ function buildRouteSummaryText(routeResult) {
 
 
 
-/* --------------------------------------------------------------------------
-
-   API 경로로 Polyline 그리기
-
-   -------------------------------------------------------------------------- */
+/* API 경로로 Polyline 그리기 */
 
 async function drawRoute() {
   const origin = { lat: mainUser.lat, lng: mainUser.lng };
 
   clearRouteLines();
 
-  // 공통 모듈로 동선 좌표 계산 (1단계 OSRM + 2단계 수동 경유지)
   const { points, destination } = await buildPatrolRoutePoints(origin);
 
-  // 하나의 주황 실선으로 그리기
   if (points.length >= 2) {
     drawRouteLine(points, "solid", 6, 0.95);
   }
 
-  // 최종 도착지 마커만 표시 (경유지 핑 없음)
   drawStopMarkers(destination);
 
-  // 전체 거리(Haversine 합산) → 도보 4km/h 기준 예상 소요시간(초)
   let totalDistance = 0;
   for (let i = 0; i < points.length - 1; i++) {
     totalDistance += estimateDistanceMeters(points[i], points[i + 1]);
@@ -341,9 +310,7 @@ async function drawRoute() {
   return { distance: totalDistance, duration: estDuration };
 }
 
-/* --------------------------------------------------------------------------
-   경로 폴리라인 그리기 / 정리
-   -------------------------------------------------------------------------- */
+/* 경로 폴리라인 그리기 / 정리 */
 function drawRouteLine(points, strokeStyle, strokeWeight, strokeOpacity) {
   const path = points.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
   const line = new kakao.maps.Polyline({
@@ -362,18 +329,13 @@ function clearRouteLines() {
   routeLines = [];
 }
 
-/* --------------------------------------------------------------------------
-   경유지 순번 마커 + 최종 도착지 마커
-   -------------------------------------------------------------------------- */
+/* 도착지 마커 */
 let stopMarkerOverlays = [];
 
 function drawStopMarkers(destination) {
   stopMarkerOverlays.forEach((overlay) => overlay.setMap(null));
   stopMarkerOverlays = [];
 
-  // 경유지 핑은 표시하지 않음 (선만 보이게)
-
-  // 최종 도착지: 깃발 마커
   if (destination) {
     const flag = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:${PATROL_ROUTE_CONFIG.color}; color:#fff; font-size:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.35);"><span style="transform:rotate(45deg);">★</span></div>`;
 
@@ -391,11 +353,7 @@ function drawStopMarkers(destination) {
 
 
 
-/* --------------------------------------------------------------------------
-
-   하단 패널 인터랙션 (대기 → 로딩 → 경로 배정 완료)
-
-   -------------------------------------------------------------------------- */
+/* 하단 패널 인터랙션 (대기 → 로딩 → 경로 배정 완료) */
 
 function setupPanelInteraction() {
 
@@ -486,11 +444,7 @@ function setupPanelInteraction() {
 
 
 
-/* --------------------------------------------------------------------------
-   로그인된 사용자 이름 적용
-   - signup 팀원이 추가할 localStorage("user_name") 기준
-   - 값이 없으면 메인 더미 사용자 → 그래도 없으면 "사용자"
-   -------------------------------------------------------------------------- */
+/* 로그인된 사용자 이름 적용 */
 function getLoggedInUserName() {
   return getDisplayUserName(mainUser?.name);
 }
@@ -511,9 +465,7 @@ function applyProfileUser() {
   });
 }
 
-/* --------------------------------------------------------------------------
-   우측 상단 원형 프로필 메뉴 토글
-   -------------------------------------------------------------------------- */
+/* 우측 상단 원형 프로필 메뉴 토글 */
 function setupProfileMenu() {
   const profileBtn = document.getElementById("profile-btn");
   const profileMenu = document.getElementById("profile-menu");
@@ -559,9 +511,7 @@ function setupProfileMenu() {
   }
 }
 
-/* --------------------------------------------------------------------------
-   로그아웃 — 로그인 세션 정리 후 login.html 이동
-   -------------------------------------------------------------------------- */
+/* 로그아웃 — 로그인 세션 정리 후 login.html 이동 */
 function logout() {
   localStorage.removeItem("signup-name");
   localStorage.removeItem("currentUser");

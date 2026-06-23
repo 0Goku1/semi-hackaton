@@ -1,8 +1,5 @@
-// ==========================================================================
-// 지도 마커
-//  - 나(메인) : images/markers/me.png (로드 실패 시 이니셜 아바타로 대체)
-//  - 팀원      : DiceBear 이니셜 아바타 (이름에서 성을 뺀 형태로 표시)
-// ==========================================================================
+// 지도 마커 — me.png(본인), DiceBear 이니셜(팀원)
+
 const ME_MARKER_IMAGE = "images/markers/me.png";
 
 function getProfileAvatarUrl(name) {
@@ -12,7 +9,6 @@ function getProfileAvatarUrl(name) {
   );
 }
 
-// 한국 이름에서 성(첫 글자)을 뺀 이름만 반환 ("이다영" -> "다영")
 function getGivenName(name) {
   if (!name) return "";
   const trimmed = name.trim();
@@ -20,7 +16,6 @@ function getGivenName(name) {
 }
 
 function getMemberAvatarUrl(name, isPatrolling) {
-  // 순찰중 -> 회색, 대기중 -> 파란색
   const bg = isPatrolling ? "9E9E9E" : "1E88E5";
   return (
     "https://api.dicebear.com/7.x/initials/svg?backgroundColor=" +
@@ -30,7 +25,6 @@ function getMemberAvatarUrl(name, isPatrolling) {
   );
 }
 
-// auth.js 로그인 시 저장하는 localStorage "currentUser" 의 이름을 사용
 function getDisplayUserName(fallbackName) {
   try {
     const current = JSON.parse(localStorage.getItem("currentUser") || "null");
@@ -55,7 +49,6 @@ function createMeMarkerElement(displayName) {
   wrap.title = `${displayName} (나)`;
 
   const img = createAvatarImg(ME_MARKER_IMAGE, `${displayName} (나)`);
-  // me.png 로드 실패 시 이니셜 아바타로 대체
   img.onerror = () => {
     img.onerror = null;
     img.src = getProfileAvatarUrl(displayName);

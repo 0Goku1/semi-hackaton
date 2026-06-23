@@ -1,6 +1,4 @@
-/* ==========================================================================
-   patrol.css  —  순찰 페이지 전용 스타일 (최종 업데이트)
-   ========================================================================== */
+/* 순찰 페이지 */
 
    * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -10,17 +8,17 @@
      background: #F5F5F7;
    }
    
-   /* ── 앱 프레임 ── */
+   /* 앱 프레임 */
    .app-frame {
      width: 100%; max-width: 430px; height: 100%;
      margin: 0 auto; position: relative;
      background: white; box-shadow: 0 0 60px rgba(0,0,0,0.5); overflow: hidden;
    }
    
-/* ── 지도 ── */
+/* 지도 */
 #map { position: absolute; inset: 0; z-index: 1; }
 
-/* ── 위치 확인 로딩 스플래시 ── */
+/* 로딩 스플래시 */
 #patrol-splash {
   position: absolute; inset: 0; z-index: 2000;
   display: flex; flex-direction: column;
@@ -58,7 +56,7 @@
   to { transform: rotate(360deg); }
 }
    
-   /* ── 헤더 오버레이 ── */
+   /* 헤더 */
    .header {
      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
      background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%);
@@ -88,12 +86,12 @@
    }
    .btn-back-header:active { background: rgba(255,255,255,0.35); }
    
-   /* 🦖 [스타일 수정 완료] 코리요 이미지 프로필이 동그랗고 깔끔하게 나오도록 배경색 및 보더 튠업 */
-   .header-icon {
-     width: 40px; height: 40px;
-     background: #ffffff !important; /* 주황 배경을 지우고 깔끔하게 흰색 배경 처리 */
-     border: 1.5px solid #ff6f00; /* 전체 테마와 어울리는 주황색 테두리 */
-     border-radius: 50% !important; /* 사각형에서 완벽한 원형 프로필로 변경 */
+/* 헤더 프로필 아이콘 */
+.header-icon {
+  width: 40px; height: 40px;
+  background: #ffffff !important;
+  border: 1.5px solid #ff6f00;
+  border-radius: 50% !important;
      display: flex; align-items: center; justify-content: center;
      overflow: hidden;
      flex-shrink: 0;
@@ -101,8 +99,8 @@
      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
    }
    
-   /* 이미지 태그가 영역을 꽉 채우도록 설정 */
-   .header-icon img {
+/* 이미지 */
+.header-icon img {
      width: 100%;
      height: 100%;
      object-fit: contain;
@@ -120,7 +118,7 @@
    .status-active  { background: rgba(52,199,89,0.9);  color: white; }
    .status-standby { background: rgba(255,149,0,0.9);  color: white; }
    
-   /* ── 하단 패널 ── */
+   /* 하단 패널 */
    .btm {
      position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
      background: white; border-radius: 20px 20px 0 0;
@@ -139,7 +137,7 @@
      text-transform: uppercase; margin-bottom: 8px;
    }
    
-   /* ── 타이머 ── */
+   /* 타이머 */
    .timer-display { text-align: center; margin-bottom: 20px; }
    
    .timer-value {
@@ -149,7 +147,7 @@
      color: #1a1a1a;
    }
    
-   /* ── 버튼 ── */
+   /* 버튼 */
    .btn-row { display: flex; gap: 10px; }
    
    .btn {
@@ -181,7 +179,7 @@
      transform: none !important;
    }
    
-   /* ── 내 위치 점 (GPS 실시간) ── */
+   /* 내 위치 점 */
    @keyframes location-pulse {
      0%   { box-shadow: 0 0 0 0px  rgba(0,122,255,0.45), 0 2px 6px rgba(0,0,0,0.3); }
      70%  { box-shadow: 0 0 0 10px rgba(0,122,255,0),    0 2px 6px rgba(0,0,0,0.3); }

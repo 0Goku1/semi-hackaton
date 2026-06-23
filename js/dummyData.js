@@ -28,9 +28,8 @@ const dummyDangerZones = [
   },
 ];
 
-  // 1-2. 순찰 동선 경유지 (직접 찍는 핑)
-  // ※ DZ_001(OSRM 도착점) → SO_001 ~ SO_012 순서대로 → 최종 DZ_003 도착
-  //    아래 lat/lng 를 지도에서 찍은 좌표로 직접 채워 넣으면 됩니다. (DZ_001 → DZ_003 구간)
+  // 순찰 동선 경유지
+  // DZ_001 → SO_001 ~ SO_017 → DZ_003
   const dummyWaypoints = [
     { id: "SO_001", label: "경유지 1",  lat: 37.21601728862465, lng: 126.93437866153921 },
     { id: "SO_002", label: "경유지 2",  lat: 37.21591819196502, lng: 126.93441254662105 },
@@ -51,23 +50,23 @@ const dummyDangerZones = [
     { id: "SO_017", label: "경유지 17", lat: 37.21449365067692, lng:126.93283651109338}
   ];
   
-  // 2. 사용자(감시원) 위치 및 상태 데이터
+  // 감시원 위치·상태
   const dummyUsers = [
     {
       id: "USER_001",
       name: "정승우",
-      isMain: true,              // [앱 화면의 주인공] 
-      lat: 37.1995,              // ※ app.js에서 브라우저 현재 위치로 덮어씀 (아래는 fallback 좌표)
+      isMain: true,              // 본인
+      lat: 37.1995,              // GPS로 덮어씀
       lng: 126.8312,
-      status: "PATROLLING",      // 상태: PATROLLING(순찰중)
+      status: "PATROLLING",      // 순찰중
     },
     {
       id: "USER_002",
       name: "이다영",
-      isMain: false,             // 다른 동료 감시원
+      isMain: false,
       lat: 37.22006682467144,
       lng: 126.94954170852772,
-      status: "PATROLLING"       // 상태: PATROLLING(순찰 중) - 맵에서 회색 마커로 처리
+      status: "PATROLLING"       // 순찰중
     },
     {
       id: "USER_003",
@@ -75,6 +74,6 @@ const dummyDangerZones = [
       isMain: false,
       lat: 37.224391702598055,
       lng: 126.98467595639282,
-      status: "WAITING",        // 상태: WAITING(대기 중) - 맵에서 파랑 마커로 처리
+      status: "WAITING",        // 대기중
     }
   ];

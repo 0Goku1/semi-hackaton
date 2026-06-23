@@ -12,7 +12,6 @@
 
     <div id="map"></div>
 
-    <!-- 위치 확인 동안 로딩 스플래시 (GPS fix 전까지 어색한 지도 가림) -->
     <div id="patrol-splash">
       <div class="patrol-spinner"></div>
       <p class="patrol-splash-text">순찰 시작 중...</p>
@@ -57,29 +56,14 @@
   <script src="js/dummyData.js"></script>
   <script src="js/patrolRoute.js"></script>
   <script src="js/secrets.js"></script>
-  <script src="js/mapMarkers.js"></script>
   <script>
-    // 🚀 화면 초기 진입 시 로그인한 사용자의 구역 데이터를 동적으로 가져와 매핑하는 스크립트 추가
-    document.addEventListener("DOMContentLoaded", function () {
-      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-      if (currentUser && currentUser.gu && currentUser.region) {
-        const subTitleEl = document.getElementById("patrol-header-sub");
-        if (subTitleEl) {
-          subTitleEl.textContent = `화성시 산불감시 · ${currentUser.gu} ${currentUser.region}`;
-        }
-      }
-    });
-
-    // 🗺️ 카카오맵 및 자바스크립트 엔진 구동 연동 유지
     const kakaoScript = document.createElement("script");
     kakaoScript.src =
       "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
       SECRETS.KAKAO_JS_KEY +
       "&autoload=false&libraries=services";
-      
+
     kakaoScript.onload = function () {
-      const appScript = document.createElement("script");
-      appScript.src = "js/app.js"; 
       const patrolScript = document.createElement("script");
       patrolScript.src = "js/patrol-app.js";
       document.body.appendChild(patrolScript);
