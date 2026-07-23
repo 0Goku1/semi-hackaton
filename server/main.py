@@ -27,8 +27,8 @@ JWT_ALG = "HS256"
 JWT_EXPIRE_DAYS = 7
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 
-LOGIN_ID_RE = re.compile(r"^[A-Za-z0-9]{6,8}$")
-PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,10}$")
+LOGIN_ID_RE = re.compile(r"^[A-Za-z0-9_]{4,20}$")
+PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,64}$")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -130,9 +130,15 @@ def create_access_token(user_id: int) -> str:
 
 def validate_credentials(login_id: str, password: str) -> None:
     if not LOGIN_ID_RE.match(login_id):
-        raise HTTPException(400, "아이디는 영문+숫자 6~8자여야 합니다.")
+        raise HTTPException(
+            400,
+            "아이디는 4~20자, 영문·숫자·_(언더스코어)만 사용할 수 있습니다.",
+        )
     if not PASSWORD_RE.match(password):
-        raise HTTPException(400, "비밀번호는 영문과 숫자를 조합한 8~10자여야 합니다.")
+        raise HTTPException(
+            400,
+            "비밀번호는 8~64자이며, 영문과 숫자를 각각 1자 이상 포함해야 합니다.",
+        )
 
 
 def row_to_user(row) -> UserOut:
@@ -262,7 +268,10 @@ def change_password(
     user: Annotated[UserOut, Depends(get_current_user)],
 ):
     if not PASSWORD_RE.match(body.new_password):
-        raise HTTPException(400, "새 비밀번호는 영문과 숫자를 조합한 8~10자여야 합니다.")
+        raise HTTPException(
+            400,
+            "새 비밀번호는 8~64자이며, 영문과 숫자를 각각 1자 이상 포함해야 합니다.",
+        )
 
     with get_conn() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:

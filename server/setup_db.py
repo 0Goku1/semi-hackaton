@@ -18,7 +18,7 @@ STATEMENTS = [
     """
     CREATE TABLE IF NOT EXISTS users (
         id              SERIAL PRIMARY KEY,
-        login_id        VARCHAR(8)  NOT NULL UNIQUE,
+        login_id        VARCHAR(20) NOT NULL UNIQUE,
         password_hash   TEXT        NOT NULL,
         name            VARCHAR(50) NOT NULL,
         gu              VARCHAR(20) NOT NULL,
@@ -48,6 +48,20 @@ with psycopg.connect(DATABASE_URL) as conn:
     with conn.cursor() as cur:
         for stmt in STATEMENTS:
             cur.execute(stmt)
+        # 기존 DB(login_id VARCHAR(8)) → VARCHAR(20) 확장
+        cur.execute(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'users' AND column_name = 'login_id'
+                ) THEN
+                    ALTER TABLE users ALTER COLUMN login_id TYPE VARCHAR(20);
+                END IF;
+            END $$;
+            """
+        )
     conn.commit()
 
 print("OK: schema applied (users, patrol_reports)")

@@ -92,9 +92,9 @@ async function changePassword(e) {
   newPwEl.setCustomValidity("");
   confirmPwEl.setCustomValidity("");
 
-  const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,10}$/;
+  const pwRegex = AuthValidation.PASSWORD_RE;
   if (!pwRegex.test(newPw)) {
-    newPwEl.setCustomValidity("영문과 숫자를 조합하여 8~10자로 입력해 주세요.");
+    newPwEl.setCustomValidity(AuthValidation.MESSAGES.password);
     newPwEl.reportValidity();
     return false;
   }

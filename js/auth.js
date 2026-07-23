@@ -7,9 +7,6 @@ const signupRegionData = {
   동탄구: ["동탄1동", "동탄2동", "동탄3동", "동탄4동", "동탄5동", "동탄6동", "동탄7동", "동탄8동", "동탄9동"],
 };
 
-const LOGIN_ID_RE = /^[A-Za-z0-9]{6,8}$/;
-const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,10}$/;
-
 function updateDongOptions() {
   const guSelect = document.getElementById("signup-gu");
   const regionSelect = document.getElementById("signup-region");
@@ -47,12 +44,12 @@ async function handleSignup(e) {
     alert("성명을 입력해 주세요.");
     return false;
   }
-  if (!LOGIN_ID_RE.test(loginId)) {
-    alert("아이디는 영문+숫자 6~8자여야 합니다.");
+  if (!AuthValidation.isValidLoginId(loginId)) {
+    alert(AuthValidation.MESSAGES.loginId);
     return false;
   }
-  if (!PASSWORD_RE.test(password)) {
-    alert("비밀번호는 영문과 숫자를 조합한 8~10자여야 합니다.");
+  if (!AuthValidation.isValidPassword(password)) {
+    alert(AuthValidation.MESSAGES.password);
     return false;
   }
   if (!gu || !region) {
