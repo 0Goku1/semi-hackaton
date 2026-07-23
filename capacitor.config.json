@@ -1,0 +1,10 @@
+{
+  "appId": "com.example.app",
+  "appName": "HwaseongApp",
+  "webDir": "semi-hackaton",
+  "android": {
+    "buildOptions": {
+      "signingConfig": "debug"
+    }
+  }
+}
