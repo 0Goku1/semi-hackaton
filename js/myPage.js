@@ -1,10 +1,10 @@
-// 내 정보 — 구역 변경, 비밀번호 변경
+// 내 정보 — FastAPI 연동 (구역 변경, 비밀번호 변경)
 
 const myPageRegionData = {
-  "효행구": ["봉담읍", "매송면", "비봉면", "정남면", "기배동"],
-  "병점구": ["진안동", "병점1동", "병점2동", "반월동", "화산동"],
-  "만세구": ["우정읍", "향남읍", "남양읍", "마도면", "송산면", "서신면", "팔탄면", "장안면", "양감면", "새솔동"],
-  "동탄구": ["동탄1동", "동탄2동", "동탄3동", "동탄4동", "동탄5동", "동탄6동", "동탄7동", "동탄8동", "동탄9동"]
+  효행구: ["봉담읍", "매송면", "비봉면", "정남면", "기배동"],
+  병점구: ["진안동", "병점1동", "병점2동", "반월동", "화산동"],
+  만세구: ["우정읍", "향남읍", "남양읍", "마도면", "송산면", "서신면", "팔탄면", "장안면", "양감면", "새솔동"],
+  동탄구: ["동탄1동", "동탄2동", "동탄3동", "동탄4동", "동탄5동", "동탄6동", "동탄7동", "동탄8동", "동탄9동"],
 };
 
 function togglePagePassword(inputId, button) {
@@ -24,22 +24,22 @@ function togglePagePassword(inputId, button) {
 }
 
 function switchTab(tab) {
-  const tabs = document.querySelectorAll('.tab-btn');
-  const regionForm = document.getElementById('region-form');
-  const passwordForm = document.getElementById('password-form');
+  const tabs = document.querySelectorAll(".tab-btn");
+  const regionForm = document.getElementById("region-form");
+  const passwordForm = document.getElementById("password-form");
 
   if (!regionForm || !passwordForm) return;
 
-  if (tab === 'region') {
-    tabs[0].classList.add('active');
-    tabs[1].classList.remove('active');
-    regionForm.classList.remove('hidden');
-    passwordForm.classList.add('hidden');
+  if (tab === "region") {
+    tabs[0].classList.add("active");
+    tabs[1].classList.remove("active");
+    regionForm.classList.remove("hidden");
+    passwordForm.classList.add("hidden");
   } else {
-    tabs[0].classList.remove('active');
-    tabs[1].classList.add('active');
-    regionForm.classList.add('hidden');
-    passwordForm.classList.remove('hidden');
+    tabs[0].classList.remove("active");
+    tabs[1].classList.add("active");
+    regionForm.classList.add("hidden");
+    passwordForm.classList.remove("hidden");
   }
 }
 
@@ -52,7 +52,7 @@ function handleGuChange() {
   regionSelect.innerHTML = "";
 
   if (myPageRegionData[selectedGu]) {
-    myPageRegionData[selectedGu].forEach(dong => {
+    myPageRegionData[selectedGu].forEach((dong) => {
       const option = document.createElement("option");
       option.value = dong;
       option.textContent = dong;
@@ -61,39 +61,28 @@ function handleGuChange() {
   }
 }
 
-function saveUpdatedRegion(e) {
+async function saveUpdatedRegion(e) {
   if (e && typeof e.preventDefault === "function") e.preventDefault();
 
   const gu = document.getElementById("modal-signup-gu").value;
   const region = document.getElementById("modal-signup-region").value;
-  const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-  const users = JSON.parse(localStorage.getItem("users") || "[]");
 
-  if (currentUser) {
-    currentUser.gu = gu;
-    currentUser.region = region;
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-
-    const userIndex = users.findIndex(u => (u.id === currentUser.id || u.name === currentUser.name));
-    if (userIndex !== -1) {
-      users[userIndex].gu = gu;
-      users[userIndex].region = region;
-      localStorage.setItem("users", JSON.stringify(users));
-    }
-
+  try {
+    const user = await ApiClient.updateMe({ gu, region });
+    ApiClient.updateCachedUser(user);
     window.location.replace("index.html");
+  } catch (err) {
+    alert(err.message || "구역 저장에 실패했습니다.");
   }
   return false;
 }
 
-function changePassword(e) {
-  if (e && typeof e.preventDefault === "function") {
-    e.preventDefault();
-  }
+async function changePassword(e) {
+  if (e && typeof e.preventDefault === "function") e.preventDefault();
 
-  const currentPwEl = document.getElementById('current-password');
-  const newPwEl = document.getElementById('new-password');
-  const confirmPwEl = document.getElementById('new-password-confirm');
+  const currentPwEl = document.getElementById("current-password");
+  const newPwEl = document.getElementById("new-password");
+  const confirmPwEl = document.getElementById("new-password-confirm");
 
   const currentPw = currentPwEl.value;
   const newPw = newPwEl.value;
@@ -103,21 +92,7 @@ function changePassword(e) {
   newPwEl.setCustomValidity("");
   confirmPwEl.setCustomValidity("");
 
-  const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-  const users = JSON.parse(localStorage.getItem("users") || "[]");
-
-  if (!currentUser) return false;
-
-  const userIndex = users.findIndex(u => (u.name === currentUser.name || u.id === currentUser.id));
-  if (userIndex === -1) return false;
-
-  if (users[userIndex].pw !== currentPw) {
-    currentPwEl.setCustomValidity("현재 비밀번호가 일치하지 않습니다.");
-    currentPwEl.reportValidity();
-    return false;
-  }
-
-  const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,10}$/;
+  const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,10}$/;
   if (!pwRegex.test(newPw)) {
     newPwEl.setCustomValidity("영문과 숫자를 조합하여 8~10자로 입력해 주세요.");
     newPwEl.reportValidity();
@@ -130,12 +105,20 @@ function changePassword(e) {
     return false;
   }
 
-  users[userIndex].pw = newPw;
-  localStorage.setItem("users", JSON.stringify(users));
-  localStorage.removeItem('currentUser');
+  try {
+    await ApiClient.changePassword({
+      current_password: currentPw,
+      new_password: newPw,
+    });
+  } catch (err) {
+    currentPwEl.setCustomValidity(err.message || "비밀번호 변경에 실패했습니다.");
+    currentPwEl.reportValidity();
+    return false;
+  }
 
-  const formGroupBtn = confirmPwEl.closest('form').querySelector('.edit-btn-group');
+  ApiClient.clearSession();
 
+  const formGroupBtn = confirmPwEl.closest("form").querySelector(".edit-btn-group");
   const existingSuccessMsg = document.getElementById("success-inline-msg");
   if (existingSuccessMsg) existingSuccessMsg.remove();
 
@@ -153,9 +136,9 @@ function changePassword(e) {
     border: 1px solid #ffdbcc;
     animation: fadeIn 0.3s ease;
   `;
-  successMessage.innerHTML = "보안 정보 변경 성공!<br><span style='font-size:12px; font-weight:500; color:#666;'>안전한 순찰을 위해 잠시 후 로그인 화면으로 이동합니다.</span>";
+  successMessage.innerHTML =
+    "보안 정보 변경 성공!<br><span style='font-size:12px; font-weight:500; color:#666;'>안전한 순찰을 위해 잠시 후 로그인 화면으로 이동합니다.</span>";
 
-  // 변경 버튼 위에 안내 메시지 삽입
   formGroupBtn.parentNode.insertBefore(successMessage, formGroupBtn);
 
   setTimeout(() => {
@@ -165,13 +148,16 @@ function changePassword(e) {
   return false;
 }
 
-function loadMyPageData() {
-  const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+async function loadMyPageData() {
+  if (!ApiClient.requireAuthPage()) return;
 
-  if (currentUser) {
+  try {
+    const currentUser = await ApiClient.getMe();
+    ApiClient.updateCachedUser(currentUser);
+
     const nameFields = document.querySelectorAll(".user-name-field");
-    nameFields.forEach(el => {
-      el.value = currentUser.name || currentUser.id || "";
+    nameFields.forEach((el) => {
+      el.value = currentUser.name || currentUser.login_id || "";
     });
 
     const guSelect = document.getElementById("modal-signup-gu");
@@ -185,17 +171,19 @@ function loadMyPageData() {
     if (regionSelect && currentUser.region) {
       regionSelect.value = currentUser.region;
     }
-  } else {
-    handleGuChange();
+  } catch (err) {
+    alert(err.message || "회원 정보를 불러오지 못했습니다.");
+    ApiClient.clearSession();
+    window.location.replace("login.html");
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   loadMyPageData();
 
-  const currentPwEl = document.getElementById('current-password');
-  const newPwEl = document.getElementById('new-password');
-  const confirmPwEl = document.getElementById('new-password-confirm');
+  const currentPwEl = document.getElementById("current-password");
+  const newPwEl = document.getElementById("new-password");
+  const confirmPwEl = document.getElementById("new-password-confirm");
 
   if (currentPwEl) currentPwEl.addEventListener("input", () => currentPwEl.setCustomValidity(""));
   if (newPwEl) newPwEl.addEventListener("input", () => newPwEl.setCustomValidity(""));

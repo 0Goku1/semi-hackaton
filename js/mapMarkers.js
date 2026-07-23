@@ -21,6 +21,12 @@ function getMemberMarkerColor(isPatrolling) {
 
 function getDisplayUserName(fallbackName) {
   try {
+    if (typeof ApiClient !== "undefined") {
+      const current = ApiClient.getCurrentUser();
+      if (current && current.name && current.name.trim()) {
+        return current.name.trim();
+      }
+    }
     const current = JSON.parse(localStorage.getItem("currentUser") || "null");
     if (current && current.name && current.name.trim()) {
       return current.name.trim();

@@ -72,6 +72,7 @@
     </div>
 
     <script src="js/secrets.js"></script>
+    <script src="js/api.js"></script>
     <script src="js/dummyData.js?v=2"></script>
     <script src="js/patrolRoute.js"></script>
     <script src="js/mapMarkers.js?v=2"></script>
@@ -82,6 +83,11 @@
         SECRETS.KAKAO_JS_KEY +
         "&autoload=false";
       kakaoScript.onload = function () {
+        const appScript = document.createElement("script");
+        appScript.src = "js/app.js";
+        document.body.appendChild(appScript);
+      };
+      kakaoScript.onerror = function () {
         const appScript = document.createElement("script");
         appScript.src = "js/app.js";
         document.body.appendChild(appScript);

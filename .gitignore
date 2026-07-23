@@ -1,1 +1,5 @@
 js/secrets.js
+server/.env
+server/.venv/
+server/__pycache__/
+*.pyc

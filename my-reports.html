@@ -29,33 +29,33 @@
       </div>
     </div>
 
+    <script src="js/secrets.js"></script>
+    <script src="js/api.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
+      document.addEventListener("DOMContentLoaded", async function () {
+        if (!ApiClient.requireAuthPage()) return;
+
         const reportListContainer = document.getElementById("dynamic-report-list");
-        const currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
-        const savedReports = JSON.parse(localStorage.getItem("patrolReports")) || [];
+        reportListContainer.innerHTML =
+          '<div style="text-align:center;color:#868e96;padding:40px 0;font-size:14px;">불러오는 중...</div>';
 
-        // 로그인 유저 본인 작성 기록만 표시
-        const myFilteredReports = savedReports.filter(report => {
-          if (currentUser && currentUser.name) {
-            return report.author === currentUser.name;
+        try {
+          const myFilteredReports = await ApiClient.listMyReports();
+
+          if (!myFilteredReports.length) {
+            reportListContainer.innerHTML = `
+              <div style="text-align: center; color: #868e96; padding: 60px 0; font-size: 14px; line-height: 1.6;">
+                아직 등록된 순찰 기록이 없습니다.<br>첫 순찰 활동을 마친 후 등록해 보세요!
+              </div>
+            `;
+            return;
           }
-          return false;
-        });
 
-        if (myFilteredReports.length === 0) {
-          reportListContainer.innerHTML = `
-            <div style="text-align: center; color: #868e96; padding: 60px 0; font-size: 14px; line-height: 1.6;">
-              아직 등록된 순찰 기록이 없습니다.<br>첫 순찰 활동을 마친 후 등록해 보세요!
-            </div>
-          `;
-          return;
-        }
-
-        reportListContainer.innerHTML = myFilteredReports.map(report => {
-          const badgeClass = report.status === "이상 발견" ? "status-alert" : "status-success";
-
-          return `
+          reportListContainer.innerHTML = myFilteredReports
+            .map((report) => {
+              const badgeClass =
+                report.status === "이상 발견" ? "status-alert" : "status-success";
+              return `
             <div class="report-card" onclick="alert('보고서 상세조회 기능은 준비 중입니다.');">
               <div class="report-top">
                 <span class="report-date">${report.date}</span>
@@ -69,7 +69,15 @@
               <div class="report-bottom">보고: ${report.notes}</div>
             </div>
           `;
-        }).join('');
+            })
+            .join("");
+        } catch (err) {
+          reportListContainer.innerHTML = `
+            <div style="text-align: center; color: #e03131; padding: 60px 0; font-size: 14px;">
+              ${err.message || "기록을 불러오지 못했습니다."}
+            </div>
+          `;
+        }
       });
     </script>
   </body>

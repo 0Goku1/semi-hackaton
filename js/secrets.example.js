@@ -1,0 +1,4 @@
+const SECRETS = {
+  KAKAO_JS_KEY: "YOUR_KAKAO_JS_KEY",
+  API_BASE_URL: "http://13.209.67.39:8000"
+};

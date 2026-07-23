@@ -19,18 +19,30 @@ function hideSplash() {
 }
 
 function initApp() {
-  // 로그인 검증 코드를 주석 처리하여 튕김 현상 방지
-  /*
-  const currentUser = localStorage.getItem("currentUser");
-  if (!currentUser && window.location.pathname.includes("index.html")) {
-    window.location.replace("login.html");
-    return;
+  if (typeof ApiClient !== "undefined") {
+    if (!ApiClient.getToken()) {
+      window.location.replace("login.html");
+      return;
+    }
+    const user = ApiClient.getCurrentUser();
+    if (user && user.name) {
+      const given = typeof getGivenName === "function" ? getGivenName(user.name) : user.name;
+      const nameEl = document.querySelector(".profile-menu-name");
+      if (nameEl) nameEl.textContent = user.name;
+      const avatar = document.getElementById("profile-avatar");
+      const menuAvatar = document.querySelector(".profile-menu-avatar");
+      const url =
+        typeof getProfileAvatarUrl === "function"
+          ? getProfileAvatarUrl(given)
+          : null;
+      if (url && avatar) avatar.src = url;
+      if (url && menuAvatar) menuAvatar.src = url;
+    }
   }
-  */
 
   setupPanelInteraction();
   setupProfileMenuNavigation();
-  
+
   // "산불 위험 구역 확인 중..." 스플래시를 잠시 보여준 뒤 깔끔하게 닫고 메인 유지
   setTimeout(hideSplash, 1200);
 }
@@ -104,7 +116,12 @@ function setupProfileMenuNavigation() {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      localStorage.removeItem("currentUser");
+      if (typeof ApiClient !== "undefined") {
+        ApiClient.clearSession();
+      } else {
+        localStorage.removeItem("currentUser");
+        localStorage.removeItem("accessToken");
+      }
       window.location.replace("login.html");
     });
   }
