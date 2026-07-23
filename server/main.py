@@ -186,6 +186,40 @@ def read_root():
     return {"message": "화성시 산불 감지 백엔드 서버가 정상 작동 중입니다!"}
 
 
+@app.get("/health/db")
+def health_db():
+    """DB 연결·users 테이블 상태 확인 (배포/디버그용)"""
+    if not DATABASE_URL:
+        raise HTTPException(503, "DATABASE_URL 미설정 (.env 확인)")
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT to_regclass('public.users')")
+                users_table = cur.fetchone()[0]
+                user_count = None
+                if users_table:
+                    cur.execute("SELECT COUNT(*) FROM users")
+                    user_count = cur.fetchone()[0]
+        return {
+            "ok": True,
+            "users_table": users_table is not None,
+            "user_count": user_count,
+        }
+    except psycopg.Error as exc:
+        raise HTTPException(503, f"DB 연결 실패: {exc}") from exc
+
+
+@app.get("/health/crypto")
+def health_crypto():
+    """bcrypt 해싱 동작 확인 (passlib 이슈 배포 검증용)"""
+    try:
+        sample = hash_password("test1234")
+        ok = verify_password("test1234", sample)
+        return {"ok": ok, "backend": "bcrypt-direct"}
+    except Exception as exc:
+        raise HTTPException(503, f"비밀번호 해싱 실패: {type(exc).__name__}: {exc}") from exc
+
+
 @app.post("/auth/signup", response_model=UserOut, status_code=201)
 def signup(body: SignupIn):
     validate_credentials(body.login_id, body.password)
@@ -207,9 +241,20 @@ def signup(body: SignupIn):
                 row = cur.fetchone()
             conn.commit()
     except psycopg.Error as exc:
-        if getattr(exc, "sqlstate", None) == "23505":
+        sqlstate = getattr(exc, "sqlstate", None)
+        if sqlstate == "23505":
             raise HTTPException(409, "이미 존재하는 아이디입니다.") from exc
-        raise
+        if sqlstate == "42P01":
+            raise HTTPException(
+                503,
+                "users 테이블이 없습니다. EC2에서 python setup_db.py 를 실행하세요.",
+            ) from exc
+        raise HTTPException(503, f"DB 오류 ({sqlstate}): {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(
+            500,
+            f"가입 처리 실패 ({type(exc).__name__}): {exc}",
+        ) from exc
     return row_to_user(row)
 
 
