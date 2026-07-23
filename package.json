@@ -1,13 +1,20 @@
 {
-  "name": "app",
+  "name": "koriyo-guard",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "화성시 산불감시 코리요 지킴이 (Capacitor + FastAPI)",
+  "private": true,
+  "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepare:www": "node scripts/prepare-www.js",
+    "cap:sync": "npm run prepare:www && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "serve": "npx --yes serve ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs"
+  "dependencies": {
+    "@capacitor/android": "^7.4.2",
+    "@capacitor/core": "^7.4.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.2"
+  }
 }

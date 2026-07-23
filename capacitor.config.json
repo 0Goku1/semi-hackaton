@@ -1,8 +1,13 @@
 {
   "appId": "com.example.app",
-  "appName": "HwaseongApp",
-  "webDir": "semi-hackaton",
+  "appName": "KoriyoGuard",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
   "android": {
+    "allowMixedContent": true,
     "buildOptions": {
       "signingConfig": "debug"
     }

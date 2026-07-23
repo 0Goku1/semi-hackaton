@@ -102,17 +102,23 @@ await ApiClient.listMyReports();
 
 ---
 
-## 로컬에서 프론트만 돌릴 때
+로컬에서 프론트만 확인할 때:
 
 ```bash
-# 프로젝트 루트에서
-cp js/secrets.example.js js/secrets.js   # 없으면 생성 후 키 채우기
+cp js/secrets.example.js js/secrets.js   # 최초 1회
 npx serve .
-# → http://localhost:3000/login.html
 ```
 
-서버(EC2)는 이미 켜져 있어야 로그인/가입이 됩니다.  
-집 PC에 DB를 설치할 필요 없습니다.
+앱(Android) 빌드 전에 **반드시**:
+
+```bash
+npm install
+npm run cap:sync
+```
+
+그다음 Android Studio에서 `android/` 폴더 Open → Run.
+
+카카오 지도(앱): 개발자 콘솔 Web 플랫폼에 `https://localhost` 등록.
 
 ---
 

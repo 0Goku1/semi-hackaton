@@ -77,22 +77,50 @@
     <script src="js/patrolRoute.js"></script>
     <script src="js/mapMarkers.js?v=2"></script>
     <script>
-      const kakaoScript = document.createElement("script");
-      kakaoScript.src =
-        "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
-        SECRETS.KAKAO_JS_KEY +
-        "&autoload=false";
-      kakaoScript.onload = function () {
+      function loadAppScript() {
+        if (document.querySelector('script[src="js/app.js"]')) return;
         const appScript = document.createElement("script");
         appScript.src = "js/app.js";
         document.body.appendChild(appScript);
-      };
-      kakaoScript.onerror = function () {
-        const appScript = document.createElement("script");
-        appScript.src = "js/app.js";
-        document.body.appendChild(appScript);
-      };
-      document.head.appendChild(kakaoScript);
+      }
+
+      function forceHideSplash(message) {
+        const splash = document.getElementById("app-splash");
+        if (!splash) return;
+        if (message) {
+          const text = splash.querySelector(".splash-text");
+          if (text) text.textContent = message;
+        }
+        splash.classList.add("fade-out");
+        setTimeout(function () {
+          if (splash.parentNode) splash.remove();
+        }, 400);
+      }
+
+      // 로그인 전이면 카카오 SDK를 기다리지 않고 즉시 로그인으로
+      if (typeof ApiClient === "undefined" || !ApiClient.getToken()) {
+        window.location.replace("login.html");
+      } else {
+        // 카카오 SDK가 막혀도 최대 4초 후 스플래시 강제 종료
+        setTimeout(function () {
+          forceHideSplash("지도를 불러오지 못했습니다. 카카오 키·도메인을 확인하세요.");
+          loadAppScript();
+        }, 4000);
+
+        const kakaoScript = document.createElement("script");
+        kakaoScript.src =
+          "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
+          SECRETS.KAKAO_JS_KEY +
+          "&autoload=false";
+        kakaoScript.onload = function () {
+          loadAppScript();
+        };
+        kakaoScript.onerror = function () {
+          forceHideSplash("지도를 불러오지 못했습니다. 카카오 키·도메인을 확인하세요.");
+          loadAppScript();
+        };
+        document.head.appendChild(kakaoScript);
+      }
     </script>
   </body>
 </html>

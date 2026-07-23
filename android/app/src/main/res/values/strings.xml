@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">HwaseongApp</string>
-    <string name="title_activity_main">HwaseongApp</string>
+    <string name="app_name">코리요지킴이</string>
+    <string name="title_activity_main">코리요지킴이</string>
     <string name="package_name">com.example.app</string>
     <string name="custom_url_scheme">com.example.app</string>
 </resources>

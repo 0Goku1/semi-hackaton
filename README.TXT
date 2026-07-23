@@ -11,7 +11,8 @@
 
   - 대상 지역 : 화성시 (효행구·병점구·만세구·동탄구)
   - UI 형태   : 9:16 모바일 프레임 (#phone-frame) 기반 반응형
-  - 데이터    : 서버/DB 없이 localStorage + 정적 더미 데이터(dummyData.js)
+  - 데이터    : EC2 FastAPI + PostgreSQL (회원·순찰기록) + 더미 지도 데이터(dummyData.js)
+  - API       : http://13.209.67.39:8000  (팀원용: docs/TEAM_API_GUIDE.md)
   - 지도      : Kakao Maps JavaScript API
   - 경로      : OSRM 도보 API + 수동 하이브리드 동선
 
@@ -22,8 +23,9 @@
   지도       Kakao Maps SDK (services 라이브러리 — Geocoder)
   경로 API   OSRM (router.project-osrm.org, foot 프로필)
   아바타     DiceBear Initials API (팀원 마커·프로필 fallback)
-  저장소     localStorage (회원·세션·순찰 로그·보고서 목록)
-  키 관리    js/secrets.js (gitignore, 로컬 전용)
+  저장소     JWT(accessToken) + currentUser 캐시 / 순찰 세션(patrolLog)은 localStorage
+  백엔드     FastAPI (server/) + PostgreSQL fire_db on AWS EC2
+  키·URL     js/secrets.js (gitignore) — js/secrets.example.js 복사 후 작성
 
 
 3. 빠른 시작
@@ -31,15 +33,19 @@
 
   [1] 저장소 클론 후 프로젝트 폴더로 이동
 
-  [2] API 키 설정
-      js/secrets.js 파일을 직접 생성합니다. (.gitignore 대상)
+  [2] API·키 설정
+      cp js/secrets.example.js js/secrets.js  (Windows: 복사)
 
         const SECRETS = {
-          KAKAO_JS_KEY: "여기에_카카오_JavaScript_키_입력"
+          KAKAO_JS_KEY: "카카오_JavaScript_키",
+          API_BASE_URL: "http://13.209.67.39:8000"
         };
 
-      카카오 개발자 콘솔(https://developers.kakao.com)에서
-      JavaScript 키를 발급받고, 플랫폼에 로컬/배포 도메인을 등록하세요.
+      카카오 개발자 콘솔에서 JavaScript 키 발급, 플랫폼에
+      http://localhost:3000 (또는 사용 포트) 등록.
+
+      API 테스트: http://13.209.67.39:8000/docs
+      팀원 통신 가이드: docs/TEAM_API_GUIDE.md
 
   [3] 로컬 서버 실행
       파일을 직접 열면(file://) 지도·GPS·fetch가 제한될 수 있습니다.
@@ -253,20 +259,23 @@
 11. 알려진 제한사항
 --------------------------------------------------------------------------------
 
-  - DB/서버 없음 : 모든 데이터는 브라우저 localStorage (기기·브라우저별 독립)
   - OSRM 외부 API : 네트워크 필요, 과도한 호출 시 rate limit 가능
-  - GPS : HTTPS 또는 localhost 환경에서만 정상 동작
+  - GPS : HTTPS / localhost / 앱(위치 권한) 환경에서 동작
   - notifications.html : 정적 UI (실시간 푸시 미연동)
   - 보고서 상세 조회 : "준비 중" alert (미구현)
+  - API는 HTTP(EC2) — 앱에서 cleartext 허용 설정 필요 (이미 반영)
 
 
-12. 향후 확장 방향 (참고)
+12. 폴더 역할 / 문서
 --------------------------------------------------------------------------------
 
-  - MariaDB + server/ 폴더 백엔드 도입 (회원·보고서·구역 DB화)
-  - 실시간 팀원 위치 WebSocket 연동
-  - 관리자 대시보드 (전체 감시원·위험구역 통합 모니터링)
-  - patrolLog 경로 좌표 전체 저장 (보고서 OSRM 구간 완벽 재현)
+  android/     Capacitor Android 앱 (Android Studio에서 Open)
+  server/      FastAPI 백엔드 소스 — 실제 실행은 AWS EC2
+  js/api.js    프론트 ↔ EC2 API 통신 (핵심)
+  docs/TEAM_API_GUIDE.md   팀원 API 치트시트
+  docs/EC2_DEPLOY.md       서버 담당자 EC2 배포 메모
+
+  향후: PostGIS 데이터셋 · 위험구역 예측 · 동선 최적화 모델
 
 
 ================================================================================
