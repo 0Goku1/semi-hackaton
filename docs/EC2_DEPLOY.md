@@ -110,8 +110,10 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 | 증상 | 확인 |
 |------|------|
+| signup **500** + `passlib` / `72 bytes` | `passlib` 제거됨. `main.py` 최신 + `pip install -r requirements.txt` 후 uvicorn 재시작 |
 | `Connection refused` | uvicorn이 떠 있는지, 보안그룹 8000 포트 열림 |
 | DB 연결 실패 | `.env`의 `DATABASE_URL`, PostgreSQL 실행 여부 |
+| `relation "users" does not exist` | `python setup_db.py` 실행 |
 | CORS 에러 | `CORS_ORIGINS=*` 인지, 서버 재시작했는지 |
 | 프론트만 실패 | 브라우저 F12 Network에서 API 응답 코드 확인 |
 
