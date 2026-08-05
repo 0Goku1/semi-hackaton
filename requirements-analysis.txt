@@ -1,0 +1,13 @@
+# 공간데이터 분석 · 격자 변환 · 동선 최적화용 (server/requirements.txt와 별도)
+# 설치: pip install -r requirements-analysis.txt
+
+geopandas==1.1.4
+shapely==2.1.2
+pyproj==3.7.2
+pandas==3.0.3
+numpy==2.4.6
+openpyxl==3.1.5
+
+# 순찰 동선 최적화
+networkx==3.6.1
+ortools==9.15.6755

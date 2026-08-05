@@ -1,9 +1,21 @@
 js/secrets.js
 server/.env
 server/.venv/
-server/__pycache__/
-*.pyc
 node_modules/
 www/
 .DS_Store
 *.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 원본 공간데이터 (총 243MB, 단일 파일 최대 96MB — GitHub 권장 한도 초과)
+# 취득 경로는 data/README.md 참조 (README는 예외로 추적)
+data/*
+!data/README.md
+
+# 분석 스크립트 실행 산출물 (스크립트로 언제든 재생성)
+analysis/*_result.txt
