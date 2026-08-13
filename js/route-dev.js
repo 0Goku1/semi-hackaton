@@ -5,14 +5,44 @@
  * - 임시 HIGH 우선 강조 + TOP 동선 찾기
  */
 const DEFAULT_CENTER = { lat: 37.1995, lng: 126.8312 };
+/** 화성·인근 작전구역. GPS가 밖이면 officers.json / 기본좌표를 시작점으로 씀 */
+const PATROL_THEATER = {
+  minLat: 37.05,
+  maxLat: 37.35,
+  minLng: 126.55,
+  maxLng: 127.15,
+};
 
 let map = null;
 let network = null;
 let allGridsPayload = null;
 let gridLayer = null;
 let myPos = { ...DEFAULT_CENTER };
+/** gps | officers | default — 배정·마커에 쓴 시작점 출처 */
+let mePosSource = "default";
 let state = "idle";
 let routeOverlays = [];
+
+function isPatrolTheater(lat, lng) {
+  return (
+    lat >= PATROL_THEATER.minLat &&
+    lat <= PATROL_THEATER.maxLat &&
+    lng >= PATROL_THEATER.minLng &&
+    lng <= PATROL_THEATER.maxLng
+  );
+}
+
+/** 배정용 내 좌표. 구역 밖 GPS면 is_me 요원 좌표 또는 DEFAULT_CENTER */
+function resolveMeForAssign() {
+  if (isPatrolTheater(myPos.lat, myPos.lng)) {
+    return { lat: myPos.lat, lng: myPos.lng, source: "gps" };
+  }
+  const meOfficer = (officersDoc?.officers || []).find((o) => o.is_me);
+  if (meOfficer && Number.isFinite(meOfficer.lat) && Number.isFinite(meOfficer.lng)) {
+    return { lat: +meOfficer.lat, lng: +meOfficer.lng, source: "officers" };
+  }
+  return { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, source: "default" };
+}
 
 function typeLabel(t) {
   return (typeof ROUTE_DEV_TYPE_KO !== "undefined" && ROUTE_DEV_TYPE_KO[t]) || t;
@@ -444,9 +474,11 @@ async function runFindRoute() {
   state = "loading";
 
   try {
+    const meStart = resolveMeForAssign();
+    mePosSource = meStart.source;
     const result = await PatrolApi.assign({
-      me_lat: myPos.lat,
-      me_lng: myPos.lng,
+      me_lat: meStart.lat,
+      me_lng: meStart.lng,
       enrich_geometry: true,
       time_limit_s: 2.0,
     });
@@ -458,12 +490,23 @@ async function runFindRoute() {
 
     const nAvail = (officersDoc?.officers || []).filter((o) => o.available).length;
     const assignedStops = result.routes.reduce((a, r) => a + (r.stops?.length || 0), 0);
+    const myStops = (my?.stops || []).length;
+    const startHint =
+      meStart.source === "gps"
+        ? ""
+        : meStart.source === "officers"
+          ? " · 시작점 officers.json(GPS 구역 밖)"
+          : " · 시작점 기본좌표(GPS 구역 밖)";
+    const emptyHint =
+      myStops === 0 && assignedStops > 0
+        ? " · 내 배정 0(다른 요원에 배분됨)"
+        : "";
     if (title) {
       title.innerHTML =
-        `내 동선 ${(my?.stops || []).length}격자 · ${Math.round(my?.minutes || 0)}분<br>` +
+        `내 동선 ${myStops}격자 · ${Math.round(my?.minutes || 0)}분<br>` +
         `<span class="panel-summary">OR-Tools · 가용 ${nAvail}명 · 전체배정 ${assignedStops}` +
         ` · 미배정 ${result.unassigned?.length || 0}` +
-        ` · ${result.meta?.elapsed_s ?? "?"}s</span>`;
+        ` · ${result.meta?.elapsed_s ?? "?"}s${startHint}${emptyHint}</span>`;
     }
     if (startBtn && my?.stops?.length) startBtn.classList.remove("hidden");
     if (btn) {
@@ -533,7 +576,19 @@ function initGridLayer() {
 }
 
 async function init() {
-  myPos = await getMyPosition();
+  const gps = await getMyPosition();
+  if (isPatrolTheater(gps.lat, gps.lng)) {
+    myPos = gps;
+    mePosSource = "gps";
+  } else {
+    // 서울 등 원거리 GPS면 지도·배정이 빈 동선으로 보임 → 화성 기본점으로 스냅
+    myPos = { ...DEFAULT_CENTER };
+    mePosSource = "default";
+    console.info(
+      "[route-dev] GPS가 작전구역 밖이라 시작점을 화성 기본좌표로 둡니다:",
+      gps
+    );
+  }
 
   map = new kakao.maps.Map(document.getElementById("map"), {
     center: new kakao.maps.LatLng(myPos.lat, myPos.lng),
