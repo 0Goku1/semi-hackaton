@@ -1,9 +1,7 @@
 /**
  * 동선 레이어 DEV
  * - Hw_Ri 기준 화성시 전 구역 500m 격자
- * - 더블클릭 → 리명·농지 등 상세
- * - TOP 동선 찾기
- * - 시작점 토글: js/routeDevStartPos.js (REMOVABLE DEV MODULE)
+ * - 시작점: index와 같이 GPS 기본 / DEV 토글로 화성시청 (routeDevStartPos.js)
  */
 const DEFAULT_CENTER =
   typeof RouteDevStartPos !== "undefined"
@@ -14,12 +12,13 @@ let map = null;
 let network = null;
 let allGridsPayload = null;
 let gridLayer = null;
+/** 배정·마커에 쓰는 시작 좌표 (TOP me_lat/me_lng 와 동일) */
 let myPos = { ...DEFAULT_CENTER };
-/** device_gps | city_hall | gps_fallback_hall */
-let mePosSource = "device_gps";
+let mePosSource = "gps";
 let meMarkerOverlay = null;
 let state = "idle";
 let routeOverlays = [];
+let startPosBusy = false;
 
 function typeLabel(t) {
   return (typeof ROUTE_DEV_TYPE_KO !== "undefined" && ROUTE_DEV_TYPE_KO[t]) || t;
@@ -51,56 +50,150 @@ function hideSplash(msg) {
   setTimeout(() => splash.parentNode && splash.remove(), 400);
 }
 
-/** DEV 모듈 기준 시작점 → myPos / mePosSource 갱신 */
-async function refreshStartPosition() {
-  if (typeof RouteDevStartPos === "undefined") {
+function syncDevStartPosUi() {
+  const R = window.RouteDevStartPos;
+  if (!R) return;
+  const btn = document.getElementById("btn-dev-start-pos");
+  const chip = document.getElementById("dev-start-status");
+  const hall = R.isHallMode();
+  if (btn) {
+    btn.textContent = R.buttonLabel();
+    btn.dataset.mode = R.getMode();
+    btn.classList.toggle("is-on", hall);
+    btn.setAttribute("aria-pressed", hall ? "true" : "false");
+    btn.disabled = !!startPosBusy;
+  }
+  if (chip) {
+    const fb =
+      mePosSource === "gps" &&
+      Math.abs(myPos.lat - DEFAULT_CENTER.lat) < 1e-6 &&
+      Math.abs(myPos.lng - DEFAULT_CENTER.lng) < 1e-6
+        ? " (GPS 폴백)"
+        : "";
+    chip.textContent = `${R.statusLabel()}${fb} · ${R.formatCoords(myPos.lat, myPos.lng)}`;
+    chip.classList.toggle("is-dev-hall", hall);
+    chip.classList.toggle("is-gps", !hall);
+  }
+}
+
+function drawMeMarker() {
+  if (!map) return;
+  const ll = new kakao.maps.LatLng(myPos.lat, myPos.lng);
+  if (meMarkerOverlay) {
+    try {
+      meMarkerOverlay.setPosition(ll);
+      meMarkerOverlay.setMap(map);
+      return;
+    } catch (_) {
+      try {
+        meMarkerOverlay.setMap(null);
+      } catch (_) {
+        /* ignore */
+      }
+      meMarkerOverlay = null;
+    }
+  }
+  const name =
+    typeof getDisplayUserName === "function" ? getDisplayUserName("정승우") : "정승우";
+  const content =
+    typeof createMeMarkerElement === "function"
+      ? createMeMarkerElement(name)
+      : name;
+  meMarkerOverlay = new kakao.maps.CustomOverlay({
+    map,
+    position: ll,
+    content,
+    xAnchor: 0.5,
+    yAnchor: 0.5,
+    zIndex: 20,
+  });
+}
+
+/** index처럼 내 위치(또는 시청) 중심으로 주변 표시 */
+function focusStartOnMap() {
+  if (!map) return;
+  drawMeMarker();
+  map.setLevel(5);
+  map.setCenter(new kakao.maps.LatLng(myPos.lat, myPos.lng));
+}
+
+function resetAssignmentForNewStart() {
+  clearRouteOverlays();
+  lastMyRoute = null;
+  state = "idle";
+  document.getElementById("btn-start-patrol")?.classList.add("hidden");
+  const actionBtn = document.getElementById("action-btn");
+  if (actionBtn) {
+    actionBtn.textContent = "동선 찾기";
+    actionBtn.disabled = false;
+  }
+}
+
+async function applyResolvedStart() {
+  const R = window.RouteDevStartPos;
+  if (!R) {
     myPos = { ...DEFAULT_CENTER };
-    mePosSource = "device_gps";
+    mePosSource = "gps";
     return myPos;
   }
-  const pos = await RouteDevStartPos.resolveStartPos();
+  const pos = await R.resolveStart();
   myPos = { lat: pos.lat, lng: pos.lng };
-  mePosSource = pos.source;
+  mePosSource = pos.mode;
   return myPos;
 }
 
-function syncDevStartPosButton() {
-  const btn = document.getElementById("btn-dev-start-pos");
-  if (!btn || typeof RouteDevStartPos === "undefined") return;
-  btn.textContent = RouteDevStartPos.buttonLabel();
-  btn.dataset.mode = RouteDevStartPos.getMode();
-  // 시청(DEV)일 때 강조 — 기본(내위치)과 구분
-  btn.classList.toggle("is-dev-hall", RouteDevStartPos.isCityHallMode());
-}
+/**
+ * 토글:
+ * - 기본(GPS): 버튼 "시청으로 이동" (꺼짐)
+ * - 클릭 → 시청 모드, 버튼 점등 + "내 위치로 이동"
+ * - 다시 클릭 → GPS, 점등 해제 + "시청으로 이동"
+ * myPos 가 곧 TOP me_lat/me_lng
+ */
+async function toggleDevStartPos() {
+  const R = window.RouteDevStartPos;
+  if (!R || startPosBusy) return;
+  startPosBusy = true;
+  syncDevStartPosUi();
 
-async function onToggleDevStartPos() {
-  if (typeof RouteDevStartPos === "undefined") return;
-  RouteDevStartPos.toggleMode();
-  syncDevStartPosButton();
-  const loading = document.getElementById("loading-overlay");
-  const loadText = loading?.querySelector(".loading-text");
-  if (loading) loading.classList.remove("hidden");
-  if (loadText) {
-    loadText.textContent = RouteDevStartPos.isCityHallMode()
-      ? "시작점: 화성시청…"
-      : "기기 GPS 읽는 중…";
-  }
   try {
-    await refreshStartPosition();
-    drawMeMarker();
-    if (map) {
-      map.panTo(new kakao.maps.LatLng(myPos.lat, myPos.lng));
+    const goingToHall = !R.isHallMode();
+    R.setMode(goingToHall ? R.MODE_HALL : R.MODE_GPS);
+
+    if (goingToHall) {
+      myPos = R.cityHall();
+      mePosSource = R.MODE_HALL;
+    } else {
+      const gps = R.getCachedGps() || (await R.fetchGps());
+      if (gps) {
+        myPos = { lat: gps.lat, lng: gps.lng };
+        mePosSource = R.MODE_GPS;
+      } else {
+        // index와 동일: GPS 실패 시 시청 좌표 폴백 (모드는 gps)
+        myPos = R.cityHall();
+        mePosSource = R.MODE_GPS;
+      }
     }
+
+    resetAssignmentForNewStart();
+    focusStartOnMap();
+    syncDevStartPosUi();
+
     const title = document.getElementById("panel-title");
-    if (title && state === "idle") {
+    if (title) {
       title.innerHTML =
-        `${RouteDevStartPos.modeHintKo()}<br>` +
-        `<span class="panel-summary">동선 찾기로 배정 · 현장 모드면 화성 밖일 때 내 격자 0 가능</span>`;
+        `${R.statusLabel()}<br>` +
+        `<span class="panel-summary">이 좌표로 동선 찾기 · ${R.formatCoords(
+          myPos.lat,
+          myPos.lng
+        )}</span>`;
     }
   } finally {
-    if (loading) loading.classList.add("hidden");
+    startPosBusy = false;
+    syncDevStartPosUi();
   }
 }
+
+window.__routeDevToggleStartPos = toggleDevStartPos;
 
 async function loadAssets() {
   const base = "route-dev-data";
@@ -149,28 +242,6 @@ function drawGeoLines(fc, color, weight) {
         zIndex: 1,
       }).setMap(map);
     });
-  });
-}
-
-function drawMeMarker() {
-  if (!map) return;
-  if (meMarkerOverlay) {
-    meMarkerOverlay.setMap(null);
-    meMarkerOverlay = null;
-  }
-  const name =
-    typeof getDisplayUserName === "function" ? getDisplayUserName("정승우") : "정승우";
-  const content =
-    typeof createMeMarkerElement === "function"
-      ? createMeMarkerElement(name)
-      : name;
-  meMarkerOverlay = new kakao.maps.CustomOverlay({
-    map,
-    position: new kakao.maps.LatLng(myPos.lat, myPos.lng),
-    content,
-    xAnchor: 0.5,
-    yAnchor: 0.5,
-    zIndex: 20,
   });
 }
 
@@ -286,15 +357,12 @@ function updatePanelIdle() {
   const n = m.count || gridLayer?.size || 0;
   const farm = m.farm_count || 0;
   const p = m.priority_count || 0;
-  const startHint =
-    typeof RouteDevStartPos !== "undefined"
-      ? ` · ${RouteDevStartPos.modeHintKo()}`
-      : "";
   if (title) {
     title.innerHTML =
       `화성 격자 ${n.toLocaleString()} · 농지 ${farm.toLocaleString()} · 우선 ${p}<br>` +
-      `<span class="panel-summary">Hw_Ri · 더블클릭 상세${startHint}</span>`;
+      `<span class="panel-summary">Hw_Ri · 더블클릭 상세 · 빨간 테두리 = 위험(방문 목표)</span>`;
   }
+  syncDevStartPosUi();
 }
 
 function drawAssignRoute(myRoute) {
@@ -497,11 +565,13 @@ async function runFindRoute() {
   state = "loading";
 
   try {
-    await refreshStartPosition();
-    drawMeMarker();
+    // 토글된 현재 myPos 를 배정 시작점으로 사용 (필요 시 GPS 캐시 갱신)
+    await applyResolvedStart();
+    focusStartOnMap();
+    syncDevStartPosUi();
     const startHint =
       typeof RouteDevStartPos !== "undefined"
-        ? ` · ${RouteDevStartPos.modeHintKo()}`
+        ? ` · ${RouteDevStartPos.statusLabel()}`
         : "";
     const result = await PatrolApi.assign({
       me_lat: myPos.lat,
@@ -591,20 +661,66 @@ function initGridLayer() {
     onOpenInfo: (g) => openGridInfo(g),
   });
   gridLayer.draw();
-  gridLayer.fitAll();
-  // 본인 위치도 보이게 한 번 더 여유
-  map.setLevel(Math.max(map.getLevel(), 8));
+  // fitAll 하지 않음 — index 동선찾기처럼 내 위치(시작점) 주변만 표시
+  focusStartOnMap();
+}
+
+let uiEventsBound = false;
+
+function bindUiEvents() {
+  if (uiEventsBound) return;
+  uiEventsBound = true;
+
+  window.__routeDevToggleStartPos = toggleDevStartPos;
+
+  document.getElementById("btn-open-detail")?.addEventListener("click", openRankDetail);
+  document.getElementById("btn-close-detail")?.addEventListener("click", closeRankDetail);
+  document.getElementById("btn-close-grid-info")?.addEventListener("click", closeGridInfo);
+  document.getElementById("btn-officers")?.addEventListener("click", openOfficerSheet);
+  document.getElementById("btn-close-officers")?.addEventListener("click", closeOfficerSheet);
+  document.getElementById("btn-officer-filter")?.addEventListener("click", cycleOfficerFilter);
+  document.getElementById("officer-add-form")?.addEventListener("submit", onAddOfficer);
+  document.getElementById("btn-start-patrol")?.addEventListener("click", startPatrolFromAssignment);
+  document.getElementById("sheet-backdrop")?.addEventListener("click", closeAllSheets);
+  document.getElementById("action-btn")?.addEventListener("click", () => {
+    if (state === "idle" || state === "ready") runFindRoute();
+  });
+  window.addEventListener("resize", () => map && map.relayout());
 }
 
 async function init() {
-  await refreshStartPosition();
-  syncDevStartPosButton();
+  bindUiEvents();
+
+  // index와 동일: 먼저 GPS(또는 시청 모드면 시청)로 중심 잡기
+  const R = window.RouteDevStartPos;
+  if (R && R.isHallMode()) {
+    myPos = R.cityHall();
+    mePosSource = R.MODE_HALL;
+  } else if (R) {
+    const gps = await R.fetchGps();
+    if (gps) {
+      myPos = gps;
+      mePosSource = R.MODE_GPS;
+    } else {
+      myPos = { ...DEFAULT_CENTER };
+      mePosSource = R.MODE_GPS;
+    }
+  }
 
   map = new kakao.maps.Map(document.getElementById("map"), {
     center: new kakao.maps.LatLng(myPos.lat, myPos.lng),
-    level: 8,
+    level: 5,
     disableDoubleClickZoom: true,
   });
+  focusStartOnMap();
+  syncDevStartPosUi();
+
+  // 로드 전에 눌러 둔 클릭 처리
+  const pendingBtn = document.getElementById("btn-dev-start-pos");
+  if (pendingBtn?.dataset.pendingClick === "1") {
+    delete pendingBtn.dataset.pendingClick;
+    toggleDevStartPos();
+  }
 
   let trails = null;
   let roads = null;
@@ -630,23 +746,9 @@ async function init() {
   renderRankUi();
   updatePanelIdle();
   await loadOfficersSafe();
-  drawMeMarker();
+  focusStartOnMap();
+  syncDevStartPosUi();
 
-  document.getElementById("btn-open-detail")?.addEventListener("click", openRankDetail);
-  document.getElementById("btn-close-detail")?.addEventListener("click", closeRankDetail);
-  document.getElementById("btn-close-grid-info")?.addEventListener("click", closeGridInfo);
-  document.getElementById("btn-officers")?.addEventListener("click", openOfficerSheet);
-  document.getElementById("btn-close-officers")?.addEventListener("click", closeOfficerSheet);
-  document.getElementById("btn-officer-filter")?.addEventListener("click", cycleOfficerFilter);
-  document.getElementById("officer-add-form")?.addEventListener("submit", onAddOfficer);
-  document.getElementById("btn-start-patrol")?.addEventListener("click", startPatrolFromAssignment);
-  document.getElementById("btn-dev-start-pos")?.addEventListener("click", onToggleDevStartPos);
-  document.getElementById("sheet-backdrop")?.addEventListener("click", closeAllSheets);
-  document.getElementById("action-btn")?.addEventListener("click", () => {
-    if (state === "idle" || state === "ready") runFindRoute();
-  });
-
-  window.addEventListener("resize", () => map && map.relayout());
   setTimeout(() => map && map.relayout(), 200);
   hideSplash();
 }
@@ -654,5 +756,6 @@ async function init() {
 if (typeof kakao !== "undefined" && kakao.maps) {
   kakao.maps.load(init);
 } else {
+  bindUiEvents();
   hideSplash("카카오 SDK 없음");
 }

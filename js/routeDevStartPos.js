@@ -1,41 +1,32 @@
 /**
  * =============================================================================
- * REMOVABLE DEV MODULE — route-dev 시작점 (기기 GPS ↔ 화성시청)
+ * REMOVABLE DEV MODULE — route-dev 시작점 토글
  * =============================================================================
- * 목적: 기본은 실GPS(제품 흐름). 원거리 디버깅할 때만 버튼으로 화성시청에 고정.
+ * 기본: 기기 GPS (index 동선찾기와 동일)
+ * DEV:  "시청으로 이동" → 화성시청 고정 (버튼 점등, 문구는 "내 위치로 이동")
  *
- * 등록 기준 좌표 (화성시청 · DEV 고정용):
- *   lat 37.1995372034835
- *   lng 126.831477350332
+ * 화성시청: 37.1995372034835, 126.831477350332
  *
- * 모드:
- *   device_gps (**기본**) — 브라우저 실GPS. 화성 밖이면 내 동선 0격자 가능(제품 방향).
- *   city_hall             — 화성시청 고정. 원거리 디버깅용.
- *
- * 제거 체크리스트 (개발 완료 후):
- *   1) 이 파일 삭제
- *   2) route-dev.html 에서 script + #btn-dev-start-pos 제거
- *   3) css/route-dev.css 의 /* DEV-START-POS */ 블록 제거
- *   4) route-dev.js 의 RouteDevStartPos 연동 → 실GPS만 쓰도록 단순화
- *   5) docs/ROUTE_DEV_PROGRESS.md §6 해당 절 삭제/갱신
+ * 제거: 이 파일 + route-dev.html #btn-dev-start-pos/#dev-start-status
+ *       + css DEV-START-POS + route-dev.js 연동
  * =============================================================================
  */
-const RouteDevStartPos = (() => {
-  const HWASEONG_CITY_HALL = Object.freeze({
+window.RouteDevStartPos = (() => {
+  const CITY_HALL = Object.freeze({
     lat: 37.1995372034835,
     lng: 126.831477350332,
-    label: "화성시청",
   });
 
-  const MODE_HALL = "city_hall";
-  const MODE_GPS = "device_gps";
-  // v2: 기본을 device_gps로 바꾼 뒤 키 갱신 (옛 city_hall 기본값이 남지 않게)
-  const STORAGE_KEY = "routeDevStartPosMode_v2";
+  const MODE_GPS = "gps";
+  const MODE_HALL = "hall";
+  const STORAGE_KEY = "routeDevStartPosMode_v4";
 
-  let mode = MODE_GPS; // 제품 기본 = 내 위치
+  let mode = MODE_GPS;
+  let cachedGps = null;
+
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === MODE_HALL || saved === MODE_GPS) mode = saved;
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s === MODE_GPS || s === MODE_HALL) mode = s;
   } catch (_) {
     /* ignore */
   }
@@ -44,7 +35,8 @@ const RouteDevStartPos = (() => {
     return mode;
   }
 
-  function isCityHallMode() {
+  /** 시청(DEV) 모드일 때 버튼 점등 */
+  function isHallMode() {
     return mode === MODE_HALL;
   }
 
@@ -59,33 +51,51 @@ const RouteDevStartPos = (() => {
   }
 
   function toggleMode() {
-    return setMode(mode === MODE_GPS ? MODE_HALL : MODE_GPS);
+    return setMode(isHallMode() ? MODE_GPS : MODE_HALL);
   }
 
-  /** 버튼 문구 = 현재 모드 */
+  /**
+   * 버튼 문구 = 다음에 갈 곳 (토글 액션)
+   * - GPS 모드(기본): "시청으로 이동"
+   * - 시청 모드(점등): "내 위치로 이동"
+   */
   function buttonLabel() {
-    return mode === MODE_GPS ? "시작: 내위치" : "시작: 시청";
+    return isHallMode() ? "내 위치로 이동" : "시청으로 이동";
   }
 
-  function modeHintKo() {
-    return mode === MODE_GPS
-      ? "시작점 기기 GPS"
-      : "시작점 화성시청(DEV)";
+  function statusLabel() {
+    return isHallMode() ? "배정 시작 · 화성시청(DEV)" : "배정 시작 · 내 위치";
   }
 
-  function fetchDeviceGps() {
+  function cityHall() {
+    return { lat: CITY_HALL.lat, lng: CITY_HALL.lng };
+  }
+
+  function getCachedGps() {
+    return cachedGps ? { ...cachedGps } : null;
+  }
+
+  function setCachedGps(lat, lng) {
+    cachedGps = { lat: +lat, lng: +lng };
+    return getCachedGps();
+  }
+
+  /** index app.js 와 동일한 GPS 읽기 (실패 시 null — 호출측에서 폴백) */
+  function fetchGps() {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
         resolve(null);
         return;
       }
       navigator.geolocation.getCurrentPosition(
-        (p) =>
-          resolve({
+        (p) => {
+          const pos = {
             lat: p.coords.latitude,
             lng: p.coords.longitude,
-            source: "device_gps",
-          }),
+          };
+          cachedGps = pos;
+          resolve({ ...pos });
+        },
         () => resolve(null),
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
       );
@@ -93,49 +103,41 @@ const RouteDevStartPos = (() => {
   }
 
   /**
-   * 현재 모드에 맞는 시작점.
-   * @returns {Promise<{lat:number,lng:number,source:string,label?:string}>}
+   * 현재 모드의 시작 좌표 (배정 me_lat / 마커)
+   * @returns {Promise<{lat:number,lng:number,mode:string}>}
    */
-  async function resolveStartPos() {
-    if (mode === MODE_HALL) {
-      return {
-        lat: HWASEONG_CITY_HALL.lat,
-        lng: HWASEONG_CITY_HALL.lng,
-        source: MODE_HALL,
-        label: HWASEONG_CITY_HALL.label,
-      };
+  async function resolveStart() {
+    if (isHallMode()) {
+      return { lat: CITY_HALL.lat, lng: CITY_HALL.lng, mode: MODE_HALL };
     }
-    const gps = await fetchDeviceGps();
-    if (gps) return gps;
-    // GPS 실패 시에만 시청 폴백
-    return {
-      lat: HWASEONG_CITY_HALL.lat,
-      lng: HWASEONG_CITY_HALL.lng,
-      source: "gps_fallback_hall",
-      label: HWASEONG_CITY_HALL.label,
-    };
+    if (cachedGps) {
+      return { lat: cachedGps.lat, lng: cachedGps.lng, mode: MODE_GPS };
+    }
+    const gps = await fetchGps();
+    if (gps) return { lat: gps.lat, lng: gps.lng, mode: MODE_GPS };
+    // GPS 실패 시에만 시청 좌표로 표시 (모드는 gps 유지 — index와 동일 폴백)
+    return { lat: CITY_HALL.lat, lng: CITY_HALL.lng, mode: MODE_GPS, fallback: true };
   }
 
-  /** 동기: 시청 좌표 (폴백 center 등) */
-  function cityHall() {
-    return {
-      lat: HWASEONG_CITY_HALL.lat,
-      lng: HWASEONG_CITY_HALL.lng,
-    };
+  function formatCoords(lat, lng) {
+    return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
   }
 
   return {
-    HWASEONG_CITY_HALL,
-    MODE_HALL,
+    CITY_HALL,
     MODE_GPS,
+    MODE_HALL,
     getMode,
-    isCityHallMode,
+    isHallMode,
     setMode,
     toggleMode,
     buttonLabel,
-    modeHintKo,
-    fetchDeviceGps,
-    resolveStartPos,
+    statusLabel,
     cityHall,
+    getCachedGps,
+    setCachedGps,
+    fetchGps,
+    resolveStart,
+    formatCoords,
   };
 })();

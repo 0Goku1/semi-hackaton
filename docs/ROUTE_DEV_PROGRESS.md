@@ -25,10 +25,10 @@
 
 위험격자 JSON + 가용 요원 → **TOP + OR-Tools** → 차량(카카오/OSRM) + 도보(등산로·임도) → 순찰 체크(완료 풀) → 일괄 보고 **파이프라인은 구현·EC2 기동까지 완료**.
 
-DEV 시작점: **기본=기기 GPS(내 위치)**, 버튼으로 **화성시청** 고정 → 원거리 디버깅 (`js/routeDevStartPos.js`, §6).  
-실GPS가 화성 밖이면 내 동선 0격자는 **정상 제품 동작**(가드로 숨기지 않음).
+**위험 격자(빨간 테두리) = 방문 목표.** 화성 전체 격자 중 위험등급이 높게 책정된 칸. 산불·인구 등 기준으로 타 파트가 JSON 공급 예정 → 배정 엔진은 그 목록만 방문한다 (회피 장애물 아님). Q3(이동 중 임도 우회 등)는 아직 미설계.
 
-위험 score 레이어는 **`data/processed/risk_grids.json`만 교체**하면 동선 파트와 독립.
+DEV 시작점: **기본=기기 GPS**, 버튼 `→ 시청` / `→ 내위치`로 시작 좌표만 전환 (`js/routeDevStartPos.js`, §6).  
+칩에 현재 모드·좌표 표시. 전환 시 마커 이동·기존 동선 초기화. GPS 실패 시 조용히 시청과 같아지지 않고 에러 안내.
 
 ---
 
@@ -209,46 +209,28 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 
 ---
 
-## 6. DEV 시작점 모듈 (실GPS 기본 ↔ 화성시청)
+## 6. 시스템 이해 (위험격자) + DEV 시작점
 
-### 등록 기준 좌표 — 화성시청 (DEV 고정용)
-```text
-lat 37.1995372034835
-lng 126.831477350332
-```
-- `js/routeDevStartPos.js` → `HWASEONG_CITY_HALL`
-- `data/processed/officers.json` → `OFF_001` (`is_me`) 동일 좌표
+### 6-A. 위험격자 = 방문 목표 (Q1·Q2 확정)
+- 화성시 수많은 500m 격자 중 **위험등급이 높게 책정된 칸**이 빨간 테두리로 보임.
+- 책정 기준(산불·인구 등)은 타 파트가 정하고 **`risk_grids.json`(또는 동일 스키마)으로 공급** 예정.
+- 우리 동선 시스템은 그 목록을 **순찰하러 갈 목표**로 TOP 배정한다. (이동 시 회피할 장애물이 아님)
+- **표시·배정 동기화 이슈**(지도 `is_priority` vs API JSON 불일치)는 별도 후속 — 목표는 “빨간 칸 = JSON 위험군 = 방문점”으로 맞추는 것.
 
-### 정책 (확정)
-| 모드 | UI 버튼 | 마커·`me_lat` | 용도 |
-|------|---------|---------------|------|
-| `device_gps` (**기본**) | `시작: 내위치` | 브라우저 실GPS | 제품 흐름·현장 |
-| `city_hall` | `시작: 시청` | 화성시청 | 원거리 디버깅 |
+### 6-B. DEV 시작점 (index와 동일 GPS 기본 + 시청 토글)
+등록 좌표(화성시청 DEV): `37.1995372034835, 126.831477350332`
 
-- **실GPS가 화성 밖 → 내 동선 0격자**는 버그가 아니라 제품 방향. 서버가 좌표를 “고쳐” 주지 않음.
-- 원거리 개발: 버튼으로 **시작: 시청** 전환 후 동선 찾기.
-- 서버(`main.py`)는 프론트가 보낸 `me_lat`/`me_lng`를 `is_me`에 **그대로** 반영.
-- 모드 선택은 `localStorage` 키 `routeDevStartPosMode_v2`에 유지.
+| 상태 | 지도·배정 시작 | 버튼 문구 | 버튼 점등 |
+|------|----------------|-----------|-----------|
+| **기본** | 내 위치 GPS (index 동선찾기와 동일) | `시청으로 이동` | 꺼짐 |
+| DEV | 화성시청 | `내 위치로 이동` | **켜짐** (`is-on`) |
 
-### 파일 (제거 쉽게)
-| 경로 | 역할 |
-|------|------|
-| `js/routeDevStartPos.js` | 모듈 본체 (`REMOVABLE DEV MODULE` 주석) |
-| `route-dev.html` | `#btn-dev-start-pos` + script 태그 |
-| `css/route-dev.css` | `/* DEV-START-POS */` 블록 |
-| `js/route-dev.js` | `RouteDevStartPos.*` 연동부만 |
+- 진입 시 `fitAll` 하지 않음 → **내 위치 주변**이 보이도록 `setCenter`+level 5.
+- 토글 시 `myPos` 갱신 = 곧 `POST /patrol/assign`의 `me_lat`/`me_lng`.
+- 클릭: `js/routeDevStartPosBind.js` document capture 위임 → `window.__routeDevToggleStartPos`.
+- `localStorage`: `routeDevStartPosMode_v4` (`gps`|`hall`)
 
-### 제거 체크리스트 (출시 전)
-1. `js/routeDevStartPos.js` 삭제  
-2. `route-dev.html` 버튼·script 제거  
-3. CSS `DEV-START-POS` 블록 제거  
-4. `route-dev.js` → 실GPS만 사용하도록 단순화  
-5. 이 절(§6) 삭제 또는 “제거 완료”로 갱신  
-
-### 사용
-1. route-dev 열기 → 기본 = **내 위치(실GPS)**  
-2. 원거리 디버깅: **시작: 내위치** 탭 → **시작: 시청** → 동선 찾기  
-3. 현장: 다시 **시작: 내위치**로 복귀  
+제거: `routeDevStartPos.js` · `routeDevStartPosBind.js` · `#btn-dev-start-pos` · `#dev-start-status` · CSS `DEV-START-POS`.
 
 ---
 
@@ -264,9 +246,9 @@ lng 126.831477350332
 
 ```text
 docs/ROUTE_DEV_PROGRESS.md 를 읽고 동선/순찰 배정 작업을 이어가 줘.
-EC2 API http://13.209.67.39:8000 에 /patrol/* 기동됨.
-DEV 시작점 js/routeDevStartPos.js — 기본 실GPS, 버튼으로 화성시청 디버깅.
-서버는 me_lat를 가드 없이 반영. 다음 우선: index.html 이식·KAKAO_REST_KEY·재TOP 등 §5.
+위험격자(빨간 테두리)=방문 목표(JSON 공급). Q3 임도 우회는 미설계.
+DEV 시작점: 기본 GPS(내 위치 주변), 버튼「시청으로 이동」점등↔「내 위치로 이동」.
+EC2 http://13.209.67.39:8000 /patrol/* . 다음: 표시-JSON 동기화 또는 index 이식 등 §5.
 ```
 
 ---

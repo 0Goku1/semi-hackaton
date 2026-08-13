@@ -222,11 +222,16 @@
   max-height: 62%;
   display: flex;
   flex-direction: column;
+  /* 닫힌 시트가 하단 버튼 클릭을 가로채지 않게 */
+  pointer-events: none;
+  visibility: hidden;
 }
 
 #detail-sheet.open,
 #grid-info-sheet.open {
   transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
 }
 
 .grid-info-body {
@@ -439,16 +444,40 @@
   border: 1.5px solid var(--primary-color) !important;
 }
 
-/* DEV-START-POS — 제거 시 이 블록 + #btn-dev-start-pos + js/routeDevStartPos.js */
-.btn-dev-start-pos {
-  flex: 0.9 !important;
-  font-size: 13px !important;
-  white-space: nowrap;
+/* DEV-START-POS — 제거 시 이 블록 + #btn-dev-start-pos + #dev-start-status + js/routeDevStartPos.js */
+.dev-start-status {
+  margin: -6px 0 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #1565c0;
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  word-break: keep-all;
 }
-.btn-dev-start-pos.is-dev-hall {
-  background: #fff8e1 !important;
-  border-color: #f9a825 !important;
-  color: #e65100 !important;
+.dev-start-status.is-dev-hall {
+  color: #e65100;
+  background: #fff8e1;
+  border-color: #ffcc80;
+}
+.btn-dev-start-pos {
+  flex: 1.1 !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* 시청(DEV) 모드일 때 점등 — 문구는 「내 위치로 이동」 */
+.btn-dev-start-pos.is-on {
+  background: #ff6b35 !important;
+  border-color: #e85a24 !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.35);
+}
+.btn-dev-start-pos:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 #btn-start-patrol {
   margin-top: 8px;
@@ -469,9 +498,33 @@
   height: min(78%, 560px);
   display: flex;
   flex-direction: column;
+  pointer-events: none;
+  visibility: hidden;
 }
 #officer-sheet.open {
   transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* 하단 패널이 시트·맵보다 확실히 위에 클릭되도록 */
+#bottom-panel {
+  z-index: 150 !important;
+  pointer-events: auto;
+}
+#bottom-panel .panel-btn,
+#bottom-panel .dev-btn-row,
+#bottom-panel .dev-start-status {
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* 숨긴 로딩이 opacity만 0이면 일부 환경에서 클릭을 먹음 → 완전 비활성 */
+#loading-overlay.hidden {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none !important;
 }
 .officer-toolbar {
   display: flex;
