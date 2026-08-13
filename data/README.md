@@ -15,6 +15,13 @@
 | `임도망도(산길)_전국/` | `데이터베이스설계서_FRT002601.xlsx` (컬럼 정의서) | 0.04 MB |
 | `임상도(1대5000)_화성시/` | `TB_FGDI_FS_IM5000_41590.shp` (+ dbf/prj/shx) | 29.3 MB |
 | `산림입지토양도(1대5000)_화성시/` | `TB_FGDI_FS_IJ5000_PG_41590.shp` (+ dbf/prj/shx) | 28.5 MB |
+| *(루트)* | `HsFram.csv` | 팜맵(화성) — git 제외, 로컬 보관 |
+
+## 팜맵 (HsFram)
+
+- 경로: `data/HsFram.csv` (Downloads가 아니라 **이 경로를 정본**으로 씀)
+- 변환: `python analysis/13_hsfram_to_grid.py` → `data/processed/hsfram_parcel_contacts.csv` 등
+- 대용량이라 gitignore 대상일 수 있음. 팀원은 동일 파일명을 `data/`에 두면 됨.
 
 ## 읽을 때 주의사항
 

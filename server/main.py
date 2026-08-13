@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Optional
@@ -405,3 +406,248 @@ def list_my_reports(user: Annotated[UserOut, Depends(get_current_user)]):
         )
         for r in rows
     ]
+
+
+# ----- 순찰 배정 (DB 불필요 · TOP + OR-Tools) -----
+
+PROC_DIR = Path(os.getenv("DATA_ROOT", "").strip() or Path(__file__).resolve().parents[1]) / "data" / "processed"
+RISK_PATH = PROC_DIR / "risk_grids.json"
+OFFICERS_PATH = PROC_DIR / "officers.json"
+POOL_PATH = PROC_DIR / "patrol_pool_state.json"
+
+
+class AssignIn(BaseModel):
+    risk_grids: Optional[list[dict]] = None  # None이면 risk_grids.json
+    officer_id: Optional[str] = None  # 특정 요원 경로만 상세 geometry
+    me_lat: Optional[float] = None
+    me_lng: Optional[float] = None
+    enrich_geometry: bool = True
+    time_limit_s: float = 2.0
+
+
+class CompleteStopIn(BaseModel):
+    grid_id: str
+    officer_id: str
+
+
+class CompletePatrolIn(BaseModel):
+    officer_id: str
+    grid_ids: list[str]
+    notes: str = ""
+
+
+def _read_pool() -> dict:
+    if POOL_PATH.exists():
+        return json.loads(POOL_PATH.read_text(encoding="utf-8"))
+    return {"schema": "koriyo.patrol_pool.v1", "completed_grid_ids": [], "in_progress": {}}
+
+
+def _write_pool(data: dict) -> None:
+    POOL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    POOL_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@app.get("/patrol/risk-grids")
+def get_risk_grids():
+    if not RISK_PATH.exists():
+        raise HTTPException(404, "risk_grids.json 없음")
+    raw = json.loads(RISK_PATH.read_text(encoding="utf-8"))
+    from patrol_core import resolve_risk_grids
+
+    return {"grids": resolve_risk_grids(raw), "path": str(RISK_PATH.name)}
+
+
+@app.put("/patrol/risk-grids")
+def put_risk_grids(body: dict):
+    """위험등급 레이어가 JSON만 갈아끼울 때 사용."""
+    from patrol_core import resolve_risk_grids, save_json
+
+    grids = resolve_risk_grids(body if "grids" in body or isinstance(body, list) else body)
+    save_json(RISK_PATH, {"schema": "koriyo.risk_grids.v1", "grids": grids})
+    return {"ok": True, "count": len(grids)}
+
+
+@app.get("/patrol/officers")
+def get_officers():
+    if not OFFICERS_PATH.exists():
+        raise HTTPException(404, "officers.json 없음")
+    return json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
+
+
+@app.put("/patrol/officers")
+def put_officers(body: dict):
+    from patrol_core import save_json
+
+    save_json(OFFICERS_PATH, body)
+    return {"ok": True, "count": len(body.get("officers", []))}
+
+
+@app.patch("/patrol/officers/{officer_id}")
+def patch_officer(officer_id: str, body: dict):
+    data = json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
+    found = False
+    for o in data.get("officers", []):
+        if o["id"] == officer_id:
+            o.update({k: v for k, v in body.items() if k in ("available", "lat", "lng", "name")})
+            found = True
+            break
+    if not found:
+        raise HTTPException(404, "officer not found")
+    from patrol_core import save_json
+
+    save_json(OFFICERS_PATH, data)
+    return {"ok": True, "officer": next(o for o in data["officers"] if o["id"] == officer_id)}
+
+
+class OfficerAddIn(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    available: bool = True
+    lat: float = 37.1995
+    lng: float = 126.8312
+    is_me: bool = False
+
+
+@app.post("/patrol/officers/add")
+def add_officer(body: OfficerAddIn):
+    from patrol_core import save_json
+
+    if not OFFICERS_PATH.exists():
+        data = {"schema": "koriyo.officers.v1", "officers": []}
+    else:
+        data = json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
+    officers = data.setdefault("officers", [])
+    n = len(officers) + 1
+    oid = f"OFF_{n:03d}"
+    while any(o.get("id") == oid for o in officers):
+        n += 1
+        oid = f"OFF_{n:03d}"
+    if body.is_me:
+        for o in officers:
+            o["is_me"] = False
+    row = {
+        "id": oid,
+        "name": body.name.strip(),
+        "available": body.available,
+        "is_me": body.is_me,
+        "lat": body.lat,
+        "lng": body.lng,
+    }
+    officers.append(row)
+    save_json(OFFICERS_PATH, data)
+    return {"ok": True, "officer": row}
+
+
+@app.delete("/patrol/officers/{officer_id}")
+def delete_officer(officer_id: str):
+    from patrol_core import save_json
+
+    if not OFFICERS_PATH.exists():
+        raise HTTPException(404, "officers.json 없음")
+    data = json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
+    before = len(data.get("officers", []))
+    data["officers"] = [o for o in data.get("officers", []) if o.get("id") != officer_id]
+    if len(data["officers"]) == before:
+        raise HTTPException(404, "officer not found")
+    save_json(OFFICERS_PATH, data)
+    return {"ok": True, "count": len(data["officers"])}
+
+
+@app.get("/patrol/pool")
+def get_pool():
+    return _read_pool()
+
+
+@app.post("/patrol/pool/reset")
+def reset_pool():
+    data = {"schema": "koriyo.patrol_pool.v1", "completed_grid_ids": [], "in_progress": {}}
+    _write_pool(data)
+    return data
+
+
+@app.post("/patrol/assign")
+def patrol_assign(body: AssignIn):
+    """가용 요원 × 위험격자 TOP+OR-Tools 배정. 완료된 격자는 후보에서 제외."""
+    try:
+        from patrol_core import assign_patrol, load_json, resolve_risk_grids
+    except ImportError as exc:
+        raise HTTPException(500, f"patrol_core import 실패: {exc}") from exc
+
+    if body.risk_grids is not None:
+        grids = body.risk_grids
+    else:
+        if not RISK_PATH.exists():
+            raise HTTPException(404, "risk_grids.json 없음")
+        grids = resolve_risk_grids(load_json(RISK_PATH))
+
+    if not OFFICERS_PATH.exists():
+        raise HTTPException(404, "officers.json 없음")
+    officers_doc = load_json(OFFICERS_PATH)
+    officers = officers_doc.get("officers", [])
+
+    # 내 GPS 반영
+    if body.me_lat is not None and body.me_lng is not None:
+        for o in officers:
+            if o.get("is_me"):
+                o["lat"] = body.me_lat
+                o["lng"] = body.me_lng
+
+    pool = _read_pool()
+    completed = set(pool.get("completed_grid_ids") or [])
+
+    result = assign_patrol(
+        grids,
+        officers,
+        completed_ids=completed,
+        time_limit_s=body.time_limit_s,
+        enrich_geometry=body.enrich_geometry,
+    )
+
+    # 요청 시 특정 요원만 남기거나, geometry는 is_me 위주 유지
+    if body.officer_id:
+        result["routes"] = [r for r in result["routes"] if r["officer_id"] == body.officer_id]
+        for r in result["routes"]:
+            if not r.get("is_me"):
+                # 다른 요원 상세 좌표는 유지하되 용량 큰 legs는 요약 가능 — 일단 유지
+                pass
+
+    # in_progress 기록
+    for r in result.get("routes", []):
+        pool.setdefault("in_progress", {})[r["officer_id"]] = [
+            s["grid_id"] for s in r.get("stops", [])
+        ]
+    _write_pool(pool)
+
+    result["pool"] = pool
+    return result
+
+
+@app.post("/patrol/complete-stop")
+def complete_stop(body: CompleteStopIn):
+    """격자 1개 순찰 체크 → 전역 완료 풀에 넣어 재배정 후보에서 제외."""
+    pool = _read_pool()
+    done = set(pool.get("completed_grid_ids") or [])
+    done.add(body.grid_id)
+    pool["completed_grid_ids"] = sorted(done)
+    prog = pool.setdefault("in_progress", {}).get(body.officer_id) or []
+    pool["in_progress"][body.officer_id] = [g for g in prog if g != body.grid_id]
+    _write_pool(pool)
+    remaining = pool["in_progress"].get(body.officer_id) or []
+    return {
+        "ok": True,
+        "grid_id": body.grid_id,
+        "remaining": remaining,
+        "all_done": len(remaining) == 0,
+        "pool": pool,
+    }
+
+
+@app.post("/patrol/complete-all")
+def complete_all(body: CompletePatrolIn):
+    """할당 구역 전부 확인 후 일괄 완료 표시(보고서 작성 직전)."""
+    pool = _read_pool()
+    done = set(pool.get("completed_grid_ids") or [])
+    done.update(body.grid_ids)
+    pool["completed_grid_ids"] = sorted(done)
+    pool.setdefault("in_progress", {})[body.officer_id] = []
+    _write_pool(pool)
+    return {"ok": True, "completed": body.grid_ids, "pool": pool}

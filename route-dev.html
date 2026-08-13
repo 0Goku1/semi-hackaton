@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>동선 레이어 DEV — 화성시 산불감시</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/route-dev.css" />
+</head>
+<body class="index-page">
+  <div id="phone-frame">
+    <div id="map"></div>
+
+    <div id="route-dev-splash">
+      <div class="route-dev-spinner"></div>
+      <p class="route-dev-splash-text">화성시 전 구역 격자 로딩…</p>
+    </div>
+
+    <div id="loading-overlay" class="hidden">
+      <div class="spinner"></div>
+      <p class="loading-text">TOP 동선 배정 중…</p>
+    </div>
+
+    <header class="route-dev-header">
+      <div class="route-dev-header-row">
+        <button class="btn-back-header" type="button" onclick="window.location.href='index.html'" aria-label="뒤로">‹</button>
+        <div>
+          <div class="route-dev-title">동선 레이어 <span class="dev-badge">DEV</span></div>
+          <div class="route-dev-sub" id="net-meta">네트워크 준비 중</div>
+        </div>
+      </div>
+    </header>
+
+    <aside id="rank-panel" aria-label="위험 등급 순위">
+      <div class="rank-panel-head">
+        <strong>위험 순위</strong>
+        <span>HIGH</span>
+      </div>
+      <ul id="rank-list"></ul>
+      <button type="button" class="rank-panel-more" id="btn-open-detail">전체 보기</button>
+    </aside>
+
+    <div id="bottom-panel">
+      <h2 id="panel-title">전체 격자 로딩 중…</h2>
+      <div class="dev-btn-row">
+        <button id="btn-officers" class="panel-btn btn-ghost" type="button">요원</button>
+        <button id="action-btn" class="panel-btn btn-primary" type="button">동선 찾기</button>
+      </div>
+      <button id="btn-start-patrol" class="panel-btn btn-success hidden" type="button">순찰 시작</button>
+    </div>
+
+    <div id="sheet-backdrop"></div>
+
+    <section id="officer-sheet" aria-hidden="true">
+      <div class="detail-handle"></div>
+      <div class="detail-head">
+        <h3>순찰 요원 (가용 / 비가용)</h3>
+        <button type="button" class="detail-close" id="btn-close-officers" aria-label="닫기">×</button>
+      </div>
+      <div class="officer-toolbar">
+        <span id="officer-summary">—</span>
+        <button type="button" class="officer-filter" id="btn-officer-filter" data-mode="all">전체</button>
+      </div>
+      <ul id="officer-list"></ul>
+      <form id="officer-add-form" class="officer-add" autocomplete="off">
+        <input type="text" id="officer-add-name" placeholder="이름 추가" maxlength="40" required />
+        <label class="officer-add-avail">
+          <input type="checkbox" id="officer-add-available" checked />
+          가용
+        </label>
+        <button type="submit" class="officer-add-btn">추가</button>
+      </form>
+    </section>
+
+    <section id="grid-info-sheet" aria-hidden="true">
+      <div class="detail-handle"></div>
+      <div class="detail-head">
+        <h3>격자 정보</h3>
+        <button type="button" class="detail-close" id="btn-close-grid-info" aria-label="닫기">×</button>
+      </div>
+      <div id="grid-info-body" class="grid-info-body"></div>
+    </section>
+
+    <section id="detail-sheet" aria-hidden="true">
+      <div class="detail-handle"></div>
+      <div class="detail-head">
+        <h3>위험 격자 JSON</h3>
+        <button type="button" class="detail-close" id="btn-close-detail" aria-label="닫기">×</button>
+      </div>
+      <ul id="detail-list"></ul>
+    </section>
+  </div>
+
+  <script src="js/secrets.js"></script>
+  <script src="js/mapMarkers.js"></script>
+  <script src="js/patrolApi.js"></script>
+  <script src="js/routeDevData.js"></script>
+  <script src="js/routeDevGridLayer.js"></script>
+  <script src="js/routeDevSolver.js"></script>
+  <script>
+    const kakaoScript = document.createElement("script");
+    kakaoScript.src =
+      "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
+      SECRETS.KAKAO_JS_KEY +
+      "&autoload=false";
+    kakaoScript.onload = function () {
+      const s = document.createElement("script");
+      s.src = "js/route-dev.js";
+      document.body.appendChild(s);
+    };
+    kakaoScript.onerror = function () {
+      const t = document.querySelector(".route-dev-splash-text");
+      if (t) t.textContent = "카카오맵 로드 실패 — secrets.js 확인";
+    };
+    document.head.appendChild(kakaoScript);
+  </script>
+</body>
+</html>

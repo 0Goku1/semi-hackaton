@@ -37,6 +37,7 @@ for (const f of htmlFiles) copyFile(path.join(root, f), path.join(out, f));
 copyDir(path.join(root, "css"), path.join(out, "css"));
 copyDir(path.join(root, "js"), path.join(out, "js"));
 copyDir(path.join(root, "images"), path.join(out, "images"));
+copyDir(path.join(root, "route-dev-data"), path.join(out, "route-dev-data"));
 
 const logo = path.join(root, "koriyo-logo.jpg");
 if (fs.existsSync(logo)) copyFile(logo, path.join(out, "koriyo-logo.jpg"));

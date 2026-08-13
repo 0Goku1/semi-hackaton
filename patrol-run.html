@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>순찰 진행 — 격자 체크</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/route-dev.css" />
+  <link rel="stylesheet" href="css/patrol-run.css" />
+</head>
+<body class="index-page">
+  <div id="phone-frame">
+    <div id="map"></div>
+    <div id="patrol-run-splash">
+      <div class="route-dev-spinner"></div>
+      <p class="route-dev-splash-text">순찰 세션 로딩…</p>
+    </div>
+
+    <header class="route-dev-header">
+      <div class="route-dev-header-row">
+        <button class="btn-back-header" type="button" onclick="location.href='route-dev.html'">‹</button>
+        <div>
+          <div class="route-dev-title" id="run-title">순찰 진행</div>
+          <div class="route-dev-sub" id="run-sub">—</div>
+        </div>
+      </div>
+    </header>
+
+    <div id="patrol-run-panel">
+      <div class="drag-handle"></div>
+      <div class="run-progress" id="progress-text">0 / 0</div>
+      <p class="run-hint" id="panel-hint">구역에 도착하면 체크 → 완료 격자는 배정 후보에서 제외</p>
+      <ul id="stop-list"></ul>
+      <button type="button" id="btn-finish-report" class="panel-btn btn-success" disabled>
+        전부 확인 · 보고서 작성
+      </button>
+    </div>
+  </div>
+
+  <script src="js/secrets.js"></script>
+  <script src="js/patrolApi.js"></script>
+  <script>
+    const kakaoScript = document.createElement("script");
+    kakaoScript.src =
+      "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" +
+      SECRETS.KAKAO_JS_KEY +
+      "&autoload=false";
+    kakaoScript.onload = function () {
+      const s = document.createElement("script");
+      s.src = "js/patrol-run.js";
+      document.body.appendChild(s);
+    };
+    document.head.appendChild(kakaoScript);
+  </script>
+</body>
+</html>

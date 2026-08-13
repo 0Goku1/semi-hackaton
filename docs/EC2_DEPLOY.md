@@ -118,3 +118,78 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 | 프론트만 실패 | 브라우저 F12 Network에서 API 응답 코드 확인 |
 
 막히면 `/docs` 스크린샷 + 터미널 에러 메시지를 팀에 공유하면 됩니다.
+
+---
+
+## 7. 순찰 배정 API (TOP + OR-Tools) — EC2 필수 파일
+
+회원 API만 올리면 `/patrol/assign` 이 **404 Not Found**. 아래를 **같은 트리**로 올린다.
+
+### 권장 디렉터리 (EC2)
+
+```text
+~/koriyo/
+  server/                 ← FastAPI
+  data/processed/         ← JSON 상태
+  route-dev-data/         ← 등산로·임도 네트워크 캐시
+```
+
+```bash
+# 로컬에서 예시
+scp -r server ubuntu@13.209.67.39:~/koriyo/server
+scp data/processed/risk_grids.json \
+    data/processed/risk_grids.example.json \
+    data/processed/officers.json \
+    data/processed/patrol_pool_state.json \
+    ubuntu@13.209.67.39:~/koriyo/data/processed/
+scp route-dev-data/route_dev_network.json \
+    ubuntu@13.209.67.39:~/koriyo/route-dev-data/
+```
+
+### 올려야 할 파일 목록
+
+| 구분 | 경로 |
+|------|------|
+| 서버 코드 | `server/main.py` |
+| | `server/patrol_core.py` |
+| | `server/requirements.txt` |
+| | `server/setup_db.py` (회원 DB용, 기존) |
+| | `server/schema.sql` (기존) |
+| | `server/.env.example` → EC2에서 `.env`로 복사 |
+| 데이터 | `data/processed/risk_grids.json` |
+| | `data/processed/officers.json` |
+| | `data/processed/patrol_pool_state.json` |
+| 네트워크 | `route-dev-data/route_dev_network.json` (**필수**, 없으면 배정 실패) |
+
+`HsFram.csv` / 화성 전체 격자 GeoJSON은 **배정 엔진에 불필요** (프론트 시각화용). EC2에는 안 올려도 됨.
+
+### `.env` 추가 항목
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/fire_db
+JWT_SECRET=긴랜덤문자열
+CORS_ORIGINS=*
+KAKAO_REST_KEY=카카오_REST_키
+# 선택: 데이터 루트가 server 상위가 아닐 때만
+# DATA_ROOT=/home/ubuntu/koriyo
+```
+
+### 재시작
+
+```bash
+cd ~/koriyo/server
+source .venv/bin/activate
+pip install -r requirements.txt
+# DATA_ROOT 쓰면:
+# export DATA_ROOT=/home/ubuntu/koriyo
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+확인: [http://13.209.67.39:8000/docs](http://13.209.67.39:8000/docs) 에  
+`/patrol/assign`, `/patrol/officers`, `/patrol/risk-grids` 보이면 OK.
+
+프론트 `js/secrets.js`:
+
+```js
+API_BASE_URL: "http://13.209.67.39:8000"
+```

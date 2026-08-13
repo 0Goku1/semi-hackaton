@@ -23,6 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  if (patrolLog && Array.isArray(patrolLog.grid_ids) && patrolLog.grid_ids.length) {
+    const notesEl = document.getElementById("patrol-notes");
+    if (notesEl && !notesEl.value) {
+      notesEl.placeholder =
+        `순찰 격자 ${patrolLog.grid_ids.length}곳 확인됨: ${patrolLog.grid_ids.join(", ")}`;
+    }
+  }
+
   const mapContainer = document.getElementById("report-map");
   if (mapContainer && typeof kakao !== "undefined" && kakao.maps) {
     new kakao.maps.Map(mapContainer, {
@@ -39,6 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const weather = (document.getElementById("weather-status") || {}).value || "";
     const user = ApiClient.getCurrentUser() || {};
     const zone =
+      (patrolLog && Array.isArray(patrolLog.grid_ids) && patrolLog.grid_ids.length
+        ? patrolLog.grid_ids.join(" · ")
+        : null) ||
       (user.gu && user.region && `${user.gu} ${user.region}`) ||
       (patrolLog && patrolLog.destination) ||
       "담당 구역";
