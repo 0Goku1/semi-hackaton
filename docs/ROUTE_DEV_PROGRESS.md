@@ -25,7 +25,8 @@
 
 위험격자 JSON + 가용 요원 → **TOP + OR-Tools** → 차량(카카오/OSRM) + 도보(등산로·임도) → 순찰 체크(완료 풀) → 일괄 보고 **파이프라인은 구현·EC2 기동까지 완료**.
 
-「내 동선 0격자」는 **원거리 GPS가 is_me 시작점을 덮어쓰던 문제**로 확인 → **§6 수정 반영(2026-08-13)**. EC2에 `server/main.py` + `js/route-dev.js` 재배포·하드 리프레시 필요.
+DEV 시작점: **기본=기기 GPS(내 위치)**, 버튼으로 **화성시청** 고정 → 원거리 디버깅 (`js/routeDevStartPos.js`, §6).  
+실GPS가 화성 밖이면 내 동선 0격자는 **정상 제품 동작**(가드로 숨기지 않음).
 
 위험 score 레이어는 **`data/processed/risk_grids.json`만 교체**하면 동선 파트와 독립.
 
@@ -127,6 +128,7 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 | 경로 | 역할 |
 |------|------|
 | `route-dev.html` + `js/route-dev.js` | 격자 지도 · 요원 · 동선 찾기 · 순찰 시작 |
+| `js/routeDevStartPos.js` | **REMOVABLE DEV** 시작점(실GPS 기본↔시청) 토글 |
 | `js/patrolApi.js` | API 클라이언트 |
 | `patrol-run.html` + `js/patrol-run.js` | 격자 체크 → 완료 풀 |
 | `patrol-report.html` + `js/report.js` | 일괄 보고서 |
@@ -193,12 +195,13 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 - [x] `secrets.js` API_BASE_URL → EC2
 
 ### 진행 중 / 버그
-- [x] **「내 동선 0격자 · 0분」** — 작전구역 밖 GPS 무시 (§6, 배포·확인만 남음)
+- [x] DEV 시작점 모듈(실GPS 기본 ↔ 화성시청 토글) — §6
 - [ ] `KAKAO_REST_KEY` EC2 `.env` 반영 여부·차량 경로 품질 확인
 - [ ] 등산로·임도 단절(다수 컴포넌트) · 데이터 보완 (의도적 후순위)
 - [ ] 근접/원격 감시 UX
 - [ ] 체크 시 즉시 전역 재TOP (현재 수동 재배정)
 - [ ] `index.html` 메인에 DEV 파이프라인 이식
+- [ ] 개발 완료 후 `routeDevStartPos` DEV 모듈 제거
 
 ### 의도적 비범위
 - 위험 score ML/기상 산출 (타 파트 JSON 공급)
@@ -206,26 +209,46 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 
 ---
 
-## 6. 버그 수정: 내 동선 0격자 · 0분 (2026-08-13)
+## 6. DEV 시작점 모듈 (실GPS 기본 ↔ 화성시청)
 
-### 증상
-- 하단: `내 동선 0격자 · 0분` + `전체배정 19` 등 → 엔진은 도는데 **is_me만 0**.
+### 등록 기준 좌표 — 화성시청 (DEV 고정용)
+```text
+lat 37.1995372034835
+lng 126.831477350332
+```
+- `js/routeDevStartPos.js` → `HWASEONG_CITY_HALL`
+- `data/processed/officers.json` → `OFF_001` (`is_me`) 동일 좌표
 
-### 원인
-`POST /patrol/assign`의 `me_lat`/`me_lng`(브라우저 GPS)가 `is_me` 요원 좌표를 덮어씀.  
-개발 PC/폰이 **화성 밖**(서울 등)이면 TOP이 나에게 격자 0개, 나머지 가용 요원에 몰아줌.
+### 정책 (확정)
+| 모드 | UI 버튼 | 마커·`me_lat` | 용도 |
+|------|---------|---------------|------|
+| `device_gps` (**기본**) | `시작: 내위치` | 브라우저 실GPS | 제품 흐름·현장 |
+| `city_hall` | `시작: 시청` | 화성시청 | 원거리 디버깅 |
 
-### 수정
-| 위치 | 내용 |
+- **실GPS가 화성 밖 → 내 동선 0격자**는 버그가 아니라 제품 방향. 서버가 좌표를 “고쳐” 주지 않음.
+- 원거리 개발: 버튼으로 **시작: 시청** 전환 후 동선 찾기.
+- 서버(`main.py`)는 프론트가 보낸 `me_lat`/`me_lng`를 `is_me`에 **그대로** 반영.
+- 모드 선택은 `localStorage` 키 `routeDevStartPosMode_v2`에 유지.
+
+### 파일 (제거 쉽게)
+| 경로 | 역할 |
 |------|------|
-| `server/main.py` | bbox `lat 37.05–37.35`, `lng 126.55–127.15` **안일 때만** GPS 반영. 밖이면 `officers.json` 유지 |
-| `js/route-dev.js` | 동일 theater 가드. 밖이면 배정·마커 시작점을 officers/`DEFAULT_CENTER`. 패널에 시작점 출처 힌트 |
+| `js/routeDevStartPos.js` | 모듈 본체 (`REMOVABLE DEV MODULE` 주석) |
+| `route-dev.html` | `#btn-dev-start-pos` + script 태그 |
+| `css/route-dev.css` | `/* DEV-START-POS */` 블록 |
+| `js/route-dev.js` | `RouteDevStartPos.*` 연동부만 |
 
-### 배포·확인
-1. 코드 push 후 EC2 `git pull` + uvicorn 재시작 (`main.py`).
-2. 프론트는 로컬/정적 서빙이면 **하드 리프레시** (`route-dev.js`).
-3. 동선 찾기 → `내 동선 N격자`(N>0) 또는 요약에 `시작점 officers.json(GPS 구역 밖)`.
-4. 그래도 0이면 Network 탭에서 `routes[].is_me` / `stops` 확인 (별 이슈).
+### 제거 체크리스트 (출시 전)
+1. `js/routeDevStartPos.js` 삭제  
+2. `route-dev.html` 버튼·script 제거  
+3. CSS `DEV-START-POS` 블록 제거  
+4. `route-dev.js` → 실GPS만 사용하도록 단순화  
+5. 이 절(§6) 삭제 또는 “제거 완료”로 갱신  
+
+### 사용
+1. route-dev 열기 → 기본 = **내 위치(실GPS)**  
+2. 원거리 디버깅: **시작: 내위치** 탭 → **시작: 시청** → 동선 찾기  
+3. 현장: 다시 **시작: 내위치**로 복귀  
 
 ---
 
@@ -241,9 +264,9 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 
 ```text
 docs/ROUTE_DEV_PROGRESS.md 를 읽고 동선/순찰 배정 작업을 이어가 줘.
-EC2 API http://13.209.67.39:8000 에 /patrol/* 기동됨. data/processed JSON은 scp로 올려 둔 상태.
-§6 GPS theater 가드는 코드 반영됨 — EC2 pull·uvicorn 재시작·route-dev 하드 리프레시 후 내 동선 N격자 확인.
-다음 우선: index.html 이식 또는 차량 경로(KAKAO_REST_KEY)·체크 시 재TOP 등 §5 미완 항목.
+EC2 API http://13.209.67.39:8000 에 /patrol/* 기동됨.
+DEV 시작점 js/routeDevStartPos.js — 기본 실GPS, 버튼으로 화성시청 디버깅.
+서버는 me_lat를 가드 없이 반영. 다음 우선: index.html 이식·KAKAO_REST_KEY·재TOP 등 §5.
 ```
 
 ---

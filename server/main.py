@@ -584,16 +584,12 @@ def patrol_assign(body: AssignIn):
     officers_doc = load_json(OFFICERS_PATH)
     officers = officers_doc.get("officers", [])
 
-    # 내 GPS 반영 — 화성·인근 작전구역 안일 때만 (원거리 GPS면 officers.json 유지)
-    def _in_patrol_theater(lat: float, lng: float) -> bool:
-        return 37.05 <= lat <= 37.35 and 126.55 <= lng <= 127.15
-
+    # 내 시작점 반영 (프론트가 보낸 좌표 그대로 — DEV 시청/실GPS 선택은 클라이언트)
     if body.me_lat is not None and body.me_lng is not None:
-        if _in_patrol_theater(float(body.me_lat), float(body.me_lng)):
-            for o in officers:
-                if o.get("is_me"):
-                    o["lat"] = body.me_lat
-                    o["lng"] = body.me_lng
+        for o in officers:
+            if o.get("is_me"):
+                o["lat"] = body.me_lat
+                o["lng"] = body.me_lng
 
     pool = _read_pool()
     completed = set(pool.get("completed_grid_ids") or [])

@@ -438,6 +438,18 @@
   color: var(--primary-color) !important;
   border: 1.5px solid var(--primary-color) !important;
 }
+
+/* DEV-START-POS — 제거 시 이 블록 + #btn-dev-start-pos + js/routeDevStartPos.js */
+.btn-dev-start-pos {
+  flex: 0.9 !important;
+  font-size: 13px !important;
+  white-space: nowrap;
+}
+.btn-dev-start-pos.is-dev-hall {
+  background: #fff8e1 !important;
+  border-color: #f9a825 !important;
+  color: #e65100 !important;
+}
 #btn-start-patrol {
   margin-top: 8px;
   width: 100%;

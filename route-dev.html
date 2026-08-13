@@ -45,6 +45,8 @@
       <h2 id="panel-title">전체 격자 로딩 중…</h2>
       <div class="dev-btn-row">
         <button id="btn-officers" class="panel-btn btn-ghost" type="button">요원</button>
+        <!-- DEV-START-POS: 제거 시 이 버튼 + js/routeDevStartPos.js 삭제 -->
+        <button id="btn-dev-start-pos" class="panel-btn btn-ghost btn-dev-start-pos" type="button" title="DEV 시작점 토글">시작: 내위치</button>
         <button id="action-btn" class="panel-btn btn-primary" type="button">동선 찾기</button>
       </div>
       <button id="btn-start-patrol" class="panel-btn btn-success hidden" type="button">순찰 시작</button>
@@ -95,6 +97,7 @@
   <script src="js/secrets.js"></script>
   <script src="js/mapMarkers.js"></script>
   <script src="js/patrolApi.js"></script>
+  <script src="js/routeDevStartPos.js"></script>
   <script src="js/routeDevData.js"></script>
   <script src="js/routeDevGridLayer.js"></script>
   <script src="js/routeDevSolver.js"></script>

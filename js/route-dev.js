@@ -2,47 +2,24 @@
  * 동선 레이어 DEV
  * - Hw_Ri 기준 화성시 전 구역 500m 격자
  * - 더블클릭 → 리명·농지 등 상세
- * - 임시 HIGH 우선 강조 + TOP 동선 찾기
+ * - TOP 동선 찾기
+ * - 시작점 토글: js/routeDevStartPos.js (REMOVABLE DEV MODULE)
  */
-const DEFAULT_CENTER = { lat: 37.1995, lng: 126.8312 };
-/** 화성·인근 작전구역. GPS가 밖이면 officers.json / 기본좌표를 시작점으로 씀 */
-const PATROL_THEATER = {
-  minLat: 37.05,
-  maxLat: 37.35,
-  minLng: 126.55,
-  maxLng: 127.15,
-};
+const DEFAULT_CENTER =
+  typeof RouteDevStartPos !== "undefined"
+    ? RouteDevStartPos.cityHall()
+    : { lat: 37.1995372034835, lng: 126.831477350332 };
 
 let map = null;
 let network = null;
 let allGridsPayload = null;
 let gridLayer = null;
 let myPos = { ...DEFAULT_CENTER };
-/** gps | officers | default — 배정·마커에 쓴 시작점 출처 */
-let mePosSource = "default";
+/** device_gps | city_hall | gps_fallback_hall */
+let mePosSource = "device_gps";
+let meMarkerOverlay = null;
 let state = "idle";
 let routeOverlays = [];
-
-function isPatrolTheater(lat, lng) {
-  return (
-    lat >= PATROL_THEATER.minLat &&
-    lat <= PATROL_THEATER.maxLat &&
-    lng >= PATROL_THEATER.minLng &&
-    lng <= PATROL_THEATER.maxLng
-  );
-}
-
-/** 배정용 내 좌표. 구역 밖 GPS면 is_me 요원 좌표 또는 DEFAULT_CENTER */
-function resolveMeForAssign() {
-  if (isPatrolTheater(myPos.lat, myPos.lng)) {
-    return { lat: myPos.lat, lng: myPos.lng, source: "gps" };
-  }
-  const meOfficer = (officersDoc?.officers || []).find((o) => o.is_me);
-  if (meOfficer && Number.isFinite(meOfficer.lat) && Number.isFinite(meOfficer.lng)) {
-    return { lat: +meOfficer.lat, lng: +meOfficer.lng, source: "officers" };
-  }
-  return { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, source: "default" };
-}
 
 function typeLabel(t) {
   return (typeof ROUTE_DEV_TYPE_KO !== "undefined" && ROUTE_DEV_TYPE_KO[t]) || t;
@@ -74,18 +51,55 @@ function hideSplash(msg) {
   setTimeout(() => splash.parentNode && splash.remove(), 400);
 }
 
-function getMyPosition() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve({ ...DEFAULT_CENTER });
-      return;
+/** DEV 모듈 기준 시작점 → myPos / mePosSource 갱신 */
+async function refreshStartPosition() {
+  if (typeof RouteDevStartPos === "undefined") {
+    myPos = { ...DEFAULT_CENTER };
+    mePosSource = "device_gps";
+    return myPos;
+  }
+  const pos = await RouteDevStartPos.resolveStartPos();
+  myPos = { lat: pos.lat, lng: pos.lng };
+  mePosSource = pos.source;
+  return myPos;
+}
+
+function syncDevStartPosButton() {
+  const btn = document.getElementById("btn-dev-start-pos");
+  if (!btn || typeof RouteDevStartPos === "undefined") return;
+  btn.textContent = RouteDevStartPos.buttonLabel();
+  btn.dataset.mode = RouteDevStartPos.getMode();
+  // 시청(DEV)일 때 강조 — 기본(내위치)과 구분
+  btn.classList.toggle("is-dev-hall", RouteDevStartPos.isCityHallMode());
+}
+
+async function onToggleDevStartPos() {
+  if (typeof RouteDevStartPos === "undefined") return;
+  RouteDevStartPos.toggleMode();
+  syncDevStartPosButton();
+  const loading = document.getElementById("loading-overlay");
+  const loadText = loading?.querySelector(".loading-text");
+  if (loading) loading.classList.remove("hidden");
+  if (loadText) {
+    loadText.textContent = RouteDevStartPos.isCityHallMode()
+      ? "시작점: 화성시청…"
+      : "기기 GPS 읽는 중…";
+  }
+  try {
+    await refreshStartPosition();
+    drawMeMarker();
+    if (map) {
+      map.panTo(new kakao.maps.LatLng(myPos.lat, myPos.lng));
     }
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => resolve({ ...DEFAULT_CENTER }),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-    );
-  });
+    const title = document.getElementById("panel-title");
+    if (title && state === "idle") {
+      title.innerHTML =
+        `${RouteDevStartPos.modeHintKo()}<br>` +
+        `<span class="panel-summary">동선 찾기로 배정 · 현장 모드면 화성 밖일 때 내 격자 0 가능</span>`;
+    }
+  } finally {
+    if (loading) loading.classList.add("hidden");
+  }
 }
 
 async function loadAssets() {
@@ -139,13 +153,18 @@ function drawGeoLines(fc, color, weight) {
 }
 
 function drawMeMarker() {
+  if (!map) return;
+  if (meMarkerOverlay) {
+    meMarkerOverlay.setMap(null);
+    meMarkerOverlay = null;
+  }
   const name =
     typeof getDisplayUserName === "function" ? getDisplayUserName("정승우") : "정승우";
   const content =
     typeof createMeMarkerElement === "function"
       ? createMeMarkerElement(name)
       : name;
-  new kakao.maps.CustomOverlay({
+  meMarkerOverlay = new kakao.maps.CustomOverlay({
     map,
     position: new kakao.maps.LatLng(myPos.lat, myPos.lng),
     content,
@@ -267,10 +286,14 @@ function updatePanelIdle() {
   const n = m.count || gridLayer?.size || 0;
   const farm = m.farm_count || 0;
   const p = m.priority_count || 0;
+  const startHint =
+    typeof RouteDevStartPos !== "undefined"
+      ? ` · ${RouteDevStartPos.modeHintKo()}`
+      : "";
   if (title) {
     title.innerHTML =
       `화성 격자 ${n.toLocaleString()} · 농지 ${farm.toLocaleString()} · 우선 ${p}<br>` +
-      `<span class="panel-summary">Hw_Ri 기준 · 더블클릭 = 상세</span>`;
+      `<span class="panel-summary">Hw_Ri · 더블클릭 상세${startHint}</span>`;
   }
 }
 
@@ -474,11 +497,15 @@ async function runFindRoute() {
   state = "loading";
 
   try {
-    const meStart = resolveMeForAssign();
-    mePosSource = meStart.source;
+    await refreshStartPosition();
+    drawMeMarker();
+    const startHint =
+      typeof RouteDevStartPos !== "undefined"
+        ? ` · ${RouteDevStartPos.modeHintKo()}`
+        : "";
     const result = await PatrolApi.assign({
-      me_lat: meStart.lat,
-      me_lng: meStart.lng,
+      me_lat: myPos.lat,
+      me_lng: myPos.lng,
       enrich_geometry: true,
       time_limit_s: 2.0,
     });
@@ -491,15 +518,9 @@ async function runFindRoute() {
     const nAvail = (officersDoc?.officers || []).filter((o) => o.available).length;
     const assignedStops = result.routes.reduce((a, r) => a + (r.stops?.length || 0), 0);
     const myStops = (my?.stops || []).length;
-    const startHint =
-      meStart.source === "gps"
-        ? ""
-        : meStart.source === "officers"
-          ? " · 시작점 officers.json(GPS 구역 밖)"
-          : " · 시작점 기본좌표(GPS 구역 밖)";
     const emptyHint =
       myStops === 0 && assignedStops > 0
-        ? " · 내 배정 0(다른 요원에 배분됨)"
+        ? " · 내 배정 0(다른 요원에 배분·또는 시작점 원거리)"
         : "";
     if (title) {
       title.innerHTML =
@@ -576,19 +597,8 @@ function initGridLayer() {
 }
 
 async function init() {
-  const gps = await getMyPosition();
-  if (isPatrolTheater(gps.lat, gps.lng)) {
-    myPos = gps;
-    mePosSource = "gps";
-  } else {
-    // 서울 등 원거리 GPS면 지도·배정이 빈 동선으로 보임 → 화성 기본점으로 스냅
-    myPos = { ...DEFAULT_CENTER };
-    mePosSource = "default";
-    console.info(
-      "[route-dev] GPS가 작전구역 밖이라 시작점을 화성 기본좌표로 둡니다:",
-      gps
-    );
-  }
+  await refreshStartPosition();
+  syncDevStartPosButton();
 
   map = new kakao.maps.Map(document.getElementById("map"), {
     center: new kakao.maps.LatLng(myPos.lat, myPos.lng),
@@ -614,13 +624,13 @@ async function init() {
     network = { grids: [], nodes: [], edges: [], meta: {} };
   }
 
-  drawMeMarker();
   if (trails) drawGeoLines(trails, "#2E7D32", 3);
   if (roads) drawGeoLines(roads, "#5D4037", 3);
   initGridLayer();
   renderRankUi();
   updatePanelIdle();
   await loadOfficersSafe();
+  drawMeMarker();
 
   document.getElementById("btn-open-detail")?.addEventListener("click", openRankDetail);
   document.getElementById("btn-close-detail")?.addEventListener("click", closeRankDetail);
@@ -630,6 +640,7 @@ async function init() {
   document.getElementById("btn-officer-filter")?.addEventListener("click", cycleOfficerFilter);
   document.getElementById("officer-add-form")?.addEventListener("submit", onAddOfficer);
   document.getElementById("btn-start-patrol")?.addEventListener("click", startPatrolFromAssignment);
+  document.getElementById("btn-dev-start-pos")?.addEventListener("click", onToggleDevStartPos);
   document.getElementById("sheet-backdrop")?.addEventListener("click", closeAllSheets);
   document.getElementById("action-btn")?.addEventListener("click", () => {
     if (state === "idle" || state === "ready") runFindRoute();
