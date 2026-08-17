@@ -1,6 +1,6 @@
 /**
  * 동선 레이어 DEV
- * - Hw_Ri 기준 화성시 전 구역 500m 격자
+ * - LSMD 읍면동 기준 화성시 전 구역 500m 격자
  * - 시작점: index와 같이 GPS 기본 / DEV 토글로 화성시청 (routeDevStartPos.js)
  */
 const DEFAULT_CENTER =
@@ -19,9 +19,129 @@ let meMarkerOverlay = null;
 let state = "idle";
 let routeOverlays = [];
 let startPosBusy = false;
+/** 등산로·임도 Polyline — 레이어 토글용 */
+let trailOverlays = [];
+let roadOverlays = [];
+const layerFlags = {
+  city: true,
+  farm: true,
+  risk: true,
+  trails: true,
+  roads: true,
+};
+/** 위험격자 동기화 메타 (risk_grids.json / API) */
+let riskSyncMeta = { source: null, matched: 0, total: 0, missing: 0 };
 
 function typeLabel(t) {
   return (typeof ROUTE_DEV_TYPE_KO !== "undefined" && ROUTE_DEV_TYPE_KO[t]) || t;
+}
+
+function normalizeRiskList(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && Array.isArray(raw.grids)) return raw.grids;
+  return [];
+}
+
+/**
+ * 시 격자 배열에 risk_grids 정본을 덮어쓴다 (export is_priority 무시).
+ * gridLayer가 이미 있으면 applyRiskFromList 로 다시 칠한다.
+ */
+function applyRiskToCityGrids(riskList, sourceLabel) {
+  const list = normalizeRiskList(riskList);
+  const sorted = list
+    .filter((r) => r && r.grid_id)
+    .slice()
+    .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+  const riskMap = new Map();
+  sorted.forEach((r, i) => {
+    riskMap.set(r.grid_id, {
+      score: r.score != null ? Number(r.score) : null,
+      risk_rank: i + 1,
+    });
+  });
+
+  const grids = allGridsPayload?.grids || [];
+  const cityIds = new Set(grids.map((g) => g.grid_id));
+  let missing = 0;
+  riskMap.forEach((_, gid) => {
+    if (!cityIds.has(gid)) missing += 1;
+  });
+
+  grids.forEach((g) => {
+    const hit = riskMap.get(g.grid_id);
+    if (hit) {
+      g.is_priority = true;
+      g.score = hit.score;
+      g.risk_rank = hit.risk_rank;
+      g.risk_source = "risk_grids";
+    } else {
+      g.is_priority = false;
+      g.score = null;
+      g.risk_rank = null;
+      g.risk_source = null;
+    }
+  });
+
+  const matched = riskMap.size - missing;
+  riskSyncMeta = {
+    source: sourceLabel || "risk_grids",
+    matched,
+    total: riskMap.size,
+    missing,
+  };
+  if (allGridsPayload?.meta) {
+    allGridsPayload.meta.priority_count = matched;
+    allGridsPayload.meta.risk_source = riskSyncMeta.source;
+  }
+
+  if (gridLayer && typeof gridLayer.applyRiskFromList === "function") {
+    gridLayer.applyRiskFromList(sorted);
+  }
+  return riskSyncMeta;
+}
+
+/** API 우선, 실패 시 로컬 data/processed/risk_grids.json */
+async function loadAndSyncRiskGrids() {
+  try {
+    if (typeof PatrolApi !== "undefined" && PatrolApi.getRiskGrids) {
+      const data = await PatrolApi.getRiskGrids();
+      const list = normalizeRiskList(data);
+      if (list.length) {
+        applyRiskToCityGrids(list, "api:/patrol/risk-grids");
+        return riskSyncMeta;
+      }
+    }
+  } catch (e) {
+    console.warn("[route-dev] risk API 실패 → 로컬 파일 시도", e);
+  }
+
+  try {
+    const res = await fetch("data/processed/risk_grids.json");
+    if (res.ok) {
+      const raw = await res.json();
+      const list = normalizeRiskList(raw);
+      if (list.length) {
+        applyRiskToCityGrids(list, "file:risk_grids.json");
+        return riskSyncMeta;
+      }
+    }
+  } catch (e) {
+    console.warn("[route-dev] risk 파일 실패", e);
+  }
+
+  // 최후: export에 박힌 is_priority 유지 (동기화 실패 표시)
+  const baked = (allGridsPayload?.grids || []).filter((g) => g.is_priority).length;
+  riskSyncMeta = {
+    source: "export-baked",
+    matched: baked,
+    total: baked,
+    missing: 0,
+  };
+  if (allGridsPayload?.meta) {
+    allGridsPayload.meta.risk_source = riskSyncMeta.source;
+  }
+  console.warn("[route-dev] risk_grids 동기화 실패 — export is_priority 유지");
+  return riskSyncMeta;
 }
 
 function priorityGrids() {
@@ -219,8 +339,8 @@ async function loadAssets() {
   return { trails, roads };
 }
 
-function drawGeoLines(fc, color, weight) {
-  if (!fc || !fc.features || !map) return;
+function drawGeoLines(fc, color, weight, bucket) {
+  if (!fc || !fc.features || !map || !bucket) return;
   fc.features.forEach((f) => {
     const g = f.geometry;
     if (!g) return;
@@ -233,16 +353,77 @@ function drawGeoLines(fc, color, weight) {
     lines.forEach((coords) => {
       if (!coords || coords.length < 2) return;
       const path = coords.map(([lng, lat]) => new kakao.maps.LatLng(lat, lng));
-      new kakao.maps.Polyline({
+      const line = new kakao.maps.Polyline({
         path,
         strokeWeight: weight,
         strokeColor: color,
         strokeOpacity: 0.7,
         strokeStyle: "solid",
         zIndex: 1,
-      }).setMap(map);
+      });
+      line.setMap(map);
+      bucket.push(line);
     });
   });
+}
+
+function setOverlayBucketVisible(bucket, visible) {
+  bucket.forEach((o) => {
+    if (!o || !o.setMap) return;
+    o.setMap(visible ? map : null);
+  });
+}
+
+function readLayerCheckboxes() {
+  const on = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? !!el.checked : fallback;
+  };
+  layerFlags.city = on("layer-city", true);
+  layerFlags.farm = on("layer-farm", true);
+  layerFlags.risk = on("layer-risk", true);
+  layerFlags.trails = on("layer-trails", true);
+  layerFlags.roads = on("layer-roads", true);
+  return layerFlags;
+}
+
+function applyLayerVisibility() {
+  readLayerCheckboxes();
+  if (gridLayer && typeof gridLayer.setLayers === "function") {
+    gridLayer.setLayers({
+      city: layerFlags.city,
+      farm: layerFlags.farm,
+      risk: layerFlags.risk,
+    });
+  }
+  setOverlayBucketVisible(trailOverlays, layerFlags.trails);
+  setOverlayBucketVisible(roadOverlays, layerFlags.roads);
+
+  const hint = document.getElementById("layer-hint");
+  if (hint) {
+    const parts = [];
+    if (layerFlags.farm && !layerFlags.city) parts.push("농경지 포커스");
+    if (layerFlags.risk && riskSyncMeta.source) {
+      parts.push(
+        `위험 ${riskSyncMeta.matched}/${riskSyncMeta.total}` +
+          (riskSyncMeta.source.startsWith("api") ? " · API" : riskSyncMeta.source === "export-baked" ? " · export" : " · JSON")
+      );
+    } else if (layerFlags.risk) {
+      parts.push("위험 레이어 ON");
+    }
+    if (!layerFlags.trails && !layerFlags.roads) parts.push("선 레이어 숨김");
+    parts.push("약수터 데이터 대기");
+    hint.textContent = parts.join(" · ");
+  }
+}
+
+function fitCityView() {
+  if (gridLayer && typeof gridLayer.fitAll === "function") {
+    gridLayer.fitAll();
+  } else if (map) {
+    map.setLevel(9);
+    map.setCenter(new kakao.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng));
+  }
 }
 
 function clearRouteOverlays() {
@@ -356,11 +537,17 @@ function updatePanelIdle() {
   const m = allGridsPayload?.meta || {};
   const n = m.count || gridLayer?.size || 0;
   const farm = m.farm_count || 0;
-  const p = m.priority_count || 0;
+  const p = m.priority_count || riskSyncMeta.matched || 0;
+  const riskNote =
+    riskSyncMeta.source === "export-baked"
+      ? "위험=export(동기화실패)"
+      : riskSyncMeta.source
+        ? `위험 ${p} · risk_grids`
+        : `위험 ${p}`;
   if (title) {
     title.innerHTML =
-      `화성 격자 ${n.toLocaleString()} · 농지 ${farm.toLocaleString()} · 우선 ${p}<br>` +
-      `<span class="panel-summary">Hw_Ri · 더블클릭 상세 · 빨간 테두리 = 위험(방문 목표)</span>`;
+      `화성 격자 ${n.toLocaleString()} · 농지 ${farm.toLocaleString()} · ${riskNote}<br>` +
+      `<span class="panel-summary">좌측 레이어 · 「시 전체」줌 · 더블클릭 상세</span>`;
   }
   syncDevStartPosUi();
 }
@@ -661,6 +848,7 @@ function initGridLayer() {
     onOpenInfo: (g) => openGridInfo(g),
   });
   gridLayer.draw();
+  applyLayerVisibility();
   // fitAll 하지 않음 — index 동선찾기처럼 내 위치(시작점) 주변만 표시
   focusStartOnMap();
 }
@@ -685,6 +873,12 @@ function bindUiEvents() {
   document.getElementById("action-btn")?.addEventListener("click", () => {
     if (state === "idle" || state === "ready") runFindRoute();
   });
+
+  ["layer-city", "layer-farm", "layer-risk", "layer-trails", "layer-roads"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", applyLayerVisibility);
+  });
+  document.getElementById("btn-fit-city")?.addEventListener("click", fitCityView);
+
   window.addEventListener("resize", () => map && map.relayout());
 }
 
@@ -726,13 +920,6 @@ async function init() {
   let roads = null;
   try {
     ({ trails, roads } = await loadAssets());
-    const m = network?.meta || {};
-    const gm = allGridsPayload?.meta || {};
-    const metaEl = document.getElementById("net-meta");
-    if (metaEl) {
-      metaEl.textContent =
-        `화성 ${gm.count?.toLocaleString?.() || "?"}격자 · 리 ${gm.ri_count || "?"} · 등산로 ${m.trail_km || "?"}km`;
-    }
   } catch (e) {
     console.warn(e);
     hideSplash(String(e.message || e));
@@ -740,11 +927,29 @@ async function init() {
     network = { grids: [], nodes: [], edges: [], meta: {} };
   }
 
-  if (trails) drawGeoLines(trails, "#2E7D32", 3);
-  if (roads) drawGeoLines(roads, "#5D4037", 3);
+  trailOverlays = [];
+  roadOverlays = [];
+  if (trails) drawGeoLines(trails, "#2E7D32", 3, trailOverlays);
+  if (roads) drawGeoLines(roads, "#5D4037", 3, roadOverlays);
+
+  await loadAndSyncRiskGrids();
   initGridLayer();
+  applyLayerVisibility();
   renderRankUi();
   updatePanelIdle();
+
+  const metaEl = document.getElementById("net-meta");
+  if (metaEl && allGridsPayload) {
+    const gm = allGridsPayload.meta || {};
+    const m = network?.meta || {};
+    const riskBit =
+      riskSyncMeta.source && riskSyncMeta.source !== "export-baked"
+        ? `위험 ${riskSyncMeta.matched}`
+        : `위험 ${gm.priority_count || 0}(미동기화)`;
+    metaEl.textContent =
+      `화성 ${gm.count?.toLocaleString?.() || "?"}격자 · 읍면동 ${gm.emd_count || "?"} · 농지 ${gm.farm_count?.toLocaleString?.() || "?"} · ${riskBit} · 등산로 ${m.trail_km || "?"}km`;
+  }
+
   await loadOfficersSafe();
   focusStartOnMap();
   syncDevStartPosUi();

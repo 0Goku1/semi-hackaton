@@ -35,10 +35,66 @@
     <aside id="rank-panel" aria-label="위험 등급 순위">
       <div class="rank-panel-head">
         <strong>위험 순위</strong>
-        <span>HIGH</span>
+        <span>JSON</span>
       </div>
       <ul id="rank-list"></ul>
       <button type="button" class="rank-panel-more" id="btn-open-detail">전체 보기</button>
+    </aside>
+
+    <!-- 레이어 토글: 농경지·등산로 등 포커스 -->
+    <aside id="layer-panel" aria-label="지도 레이어">
+      <div class="layer-panel-head">
+        <strong>레이어</strong>
+        <button type="button" class="layer-fit-btn" id="btn-fit-city" title="화성시 전체 보기">시 전체</button>
+      </div>
+      <ul class="layer-list">
+        <li>
+          <label class="layer-item">
+            <input type="checkbox" id="layer-city" checked />
+            <span class="layer-swatch layer-swatch-city"></span>
+            <span>시 전체 격자</span>
+          </label>
+        </li>
+        <li>
+          <label class="layer-item">
+            <input type="checkbox" id="layer-farm" checked />
+            <span class="layer-swatch layer-swatch-farm"></span>
+            <span>농경지 격자</span>
+            <span class="layer-tag">HsFram</span>
+          </label>
+        </li>
+        <li>
+          <label class="layer-item">
+            <input type="checkbox" id="layer-risk" checked />
+            <span class="layer-swatch layer-swatch-risk"></span>
+            <span>위험격자</span>
+            <span class="layer-tag">JSON</span>
+          </label>
+        </li>
+        <li>
+          <label class="layer-item">
+            <input type="checkbox" id="layer-trails" checked />
+            <span class="layer-swatch layer-swatch-trail"></span>
+            <span>등산로</span>
+          </label>
+        </li>
+        <li>
+          <label class="layer-item">
+            <input type="checkbox" id="layer-roads" checked />
+            <span class="layer-swatch layer-swatch-road"></span>
+            <span>임도</span>
+          </label>
+        </li>
+        <li>
+          <label class="layer-item layer-item--soon">
+            <input type="checkbox" id="layer-spring" disabled />
+            <span class="layer-swatch layer-swatch-spring"></span>
+            <span>약수터</span>
+            <span class="layer-tag layer-tag-soon">추가 예정</span>
+          </label>
+        </li>
+      </ul>
+      <p class="layer-hint" id="layer-hint">위험=risk_grids · 농경지=HsFram · 약수터 대기</p>
     </aside>
 
     <div id="bottom-panel">

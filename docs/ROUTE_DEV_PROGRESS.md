@@ -5,7 +5,7 @@
 > 새 세션/다른 사람 AI에게 넘길 때 **이 파일부터** 읽히면 된다.
 >
 > 관련 상세: API `docs/PATROL_ASSIGN_API.md` · 설계 `docs/PATROL_ROUTE_OPTIMIZATION.md` · EC2 기초 `docs/EC2_DEPLOY.md`  
-> 마지막 갱신: **2026-08-13**
+> 마지막 갱신: **2026-08-17** (route-dev 레이어 토글 · 시 전체 보기)
 
 ---
 
@@ -21,14 +21,21 @@
 
 ---
 
-## 1. 한 줄 현황 (2026-08-13)
+## 1. 한 줄 현황 (2026-08-17)
 
 위험격자 JSON + 가용 요원 → **TOP + OR-Tools** → 차량(카카오/OSRM) + 도보(등산로·임도) → 순찰 체크(완료 풀) → 일괄 보고 **파이프라인은 구현·EC2 기동까지 완료**.
 
 **위험 격자(빨간 테두리) = 방문 목표.** 화성 전체 격자 중 위험등급이 높게 책정된 칸. 산불·인구 등 기준으로 타 파트가 JSON 공급 예정 → 배정 엔진은 그 목록만 방문한다 (회피 장애물 아님). Q3(이동 중 임도 우회 등)는 아직 미설계.
 
-DEV 시작점: **기본=기기 GPS**, 버튼 `→ 시청` / `→ 내위치`로 시작 좌표만 전환 (`js/routeDevStartPos.js`, §6).  
-칩에 현재 모드·좌표 표시. 전환 시 마커 이동·기존 동선 초기화. GPS 실패 시 조용히 시청과 같아지지 않고 에러 안내.
+DEV 시작점: **기본=기기 GPS**, 버튼 `시청으로 이동`(점등 시 `내 위치로 이동`) — `js/routeDevStartPos.js` §6.
+
+**경계 데이터:** `LSMD_ADM_SECT_UMD`(법정동·읍면동, `COL_ADM_SE=41590`)로 **완전 대체** — **3,245칸** / ≈ **704 km²**.  
+동탄·병점 등 도시동 포함. `Hw_Ri` / `Hw_ri_B` CSV는 **삭제함**.  
+재생성: `python analysis/16_export_hwaseong_grids.py`
+
+**route-dev 레이어 패널(좌측):** 시 전체 격자 / 농경지(`has_farm`·HsFram) / **위험=`risk_grids.json`(API 우선)** / 등산로 / 임도 토글 + **「시 전체」** fitBounds. 약수터는 disabled「추가 예정」.  
+진입은 GPS 중심(level 5); 시 전체를 보려면 패널의 **시 전체** 버튼.  
+위험 표시는 export `is_priority`가 아니라 **`GET /patrol/risk-grids` → 실패 시 `data/processed/risk_grids.json`** 으로 덮어쓴다 (배정과 동일 정본).
 
 ---
 
@@ -127,7 +134,8 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 ### 프론트 (DEV)
 | 경로 | 역할 |
 |------|------|
-| `route-dev.html` + `js/route-dev.js` | 격자 지도 · 요원 · 동선 찾기 · 순찰 시작 |
+| `route-dev.html` + `js/route-dev.js` | 격자 지도 · 레이어 토글 · 요원 · 동선 찾기 · 순찰 시작 |
+| `js/routeDevGridLayer.js` | 시/농지/위험 스타일 · `setLayers` · `fitAll` |
 | `js/routeDevStartPos.js` | **REMOVABLE DEV** 시작점(실GPS 기본↔시청) 토글 |
 | `js/patrolApi.js` | API 클라이언트 |
 | `patrol-run.html` + `js/patrol-run.js` | 격자 체크 → 완료 풀 |
@@ -193,15 +201,21 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 - [x] route-dev / patrol-run DEV UI
 - [x] EC2에 `/patrol/*` 코드 배포 · uvicorn 기동 · JSON·네트워크 배치
 - [x] `secrets.js` API_BASE_URL → EC2
+- [x] DEV 시작점 모듈(실GPS 기본 ↔ 화성시청 토글) — §6
+- [x] 시 경계 LSMD 읍면동(41590) 격자 재생성 (3,245칸 / 704 km²) · RI CSV 삭제
+- [x] route-dev **레이어 토글** (시/농경지/위험/등산로/임도) + **시 전체 보기** (`fitAll`)
+- [x] 농경지 포커스: `has_farm` 스타일 강화 · 시 격자 OFF 시 농지만 표시
+- [x] 빨간 테두리 ↔ `risk_grids.json` 동기화 (API `/patrol/risk-grids` → 로컬 파일 폴백)
 
 ### 진행 중 / 버그
-- [x] DEV 시작점 모듈(실GPS 기본 ↔ 화성시청 토글) — §6
+- [ ] 약수터 레이어 (UI 자리만 · 데이터 대기)
 - [ ] `KAKAO_REST_KEY` EC2 `.env` 반영 여부·차량 경로 품질 확인
 - [ ] 등산로·임도 단절(다수 컴포넌트) · 데이터 보완 (의도적 후순위)
 - [ ] 근접/원격 감시 UX
 - [ ] 체크 시 즉시 전역 재TOP (현재 수동 재배정)
 - [ ] `index.html` 메인에 DEV 파이프라인 이식
 - [ ] 개발 완료 후 `routeDevStartPos` DEV 모듈 제거
+- [ ] Capacitor/`www` 메뉴에 route-dev 반영 (`npm run prepare:www` + 재빌드)
 
 ### 의도적 비범위
 - 위험 score ML/기상 산출 (타 파트 JSON 공급)
@@ -215,7 +229,7 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 - 화성시 수많은 500m 격자 중 **위험등급이 높게 책정된 칸**이 빨간 테두리로 보임.
 - 책정 기준(산불·인구 등)은 타 파트가 정하고 **`risk_grids.json`(또는 동일 스키마)으로 공급** 예정.
 - 우리 동선 시스템은 그 목록을 **순찰하러 갈 목표**로 TOP 배정한다. (이동 시 회피할 장애물이 아님)
-- **표시·배정 동기화 이슈**(지도 `is_priority` vs API JSON 불일치)는 별도 후속 — 목표는 “빨간 칸 = JSON 위험군 = 방문점”으로 맞추는 것.
+- **표시·배정 동기화:** route-dev는 로드 시 `PatrolApi.getRiskGrids()` → 실패 시 `data/processed/risk_grids.json`으로 `is_priority`/`score`/`risk_rank`를 **덮어쓴다**. 배정 API도 동일 파일. JSON만 갈아끼우면 지도 빨간칸·순위패널·TOP 후보가 같이 바뀐다.
 
 ### 6-B. DEV 시작점 (index와 동일 GPS 기본 + 시청 토글)
 등록 좌표(화성시청 DEV): `37.1995372034835, 126.831477350332`
@@ -232,6 +246,18 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 
 제거: `routeDevStartPos.js` · `routeDevStartPosBind.js` · `#btn-dev-start-pos` · `#dev-start-status` · CSS `DEV-START-POS`.
 
+### 6-C. 레이어 패널 (`#layer-panel`)
+| 체크 | 동작 |
+|------|------|
+| 시 전체 격자 | `!has_farm` 시역 칸 (+ 농지 OFF 시 농지 칸도 시역 스타일) |
+| 농경지 격자 | `has_farm` (HsFram 병합) — 주황 강조. **시 OFF + 농지 ON** = 농경지 포커스 |
+| 위험격자 | `risk_grids.json` 목록만 빨간 스타일 (배정과 동일 정본) |
+| 등산로 / 임도 | GeoJSON Polyline show/hide |
+| 약수터 | disabled · 데이터 대기 |
+| **시 전체** 버튼 | `gridLayer.fitAll()` — GPS 진입 후 시 경계 한눈에 |
+
+파일: `route-dev.html` `#layer-panel` · `js/routeDevGridLayer.js` `setLayers` · `js/route-dev.js` `applyLayerVisibility` / `fitCityView`.
+
 ---
 
 ## 7. 프론트 “내” 표시와의 관계
@@ -247,8 +273,9 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 ```text
 docs/ROUTE_DEV_PROGRESS.md 를 읽고 동선/순찰 배정 작업을 이어가 줘.
 위험격자(빨간 테두리)=방문 목표(JSON 공급). Q3 임도 우회는 미설계.
-DEV 시작점: 기본 GPS(내 위치 주변), 버튼「시청으로 이동」점등↔「내 위치로 이동」.
-EC2 http://13.209.67.39:8000 /patrol/* . 다음: 표시-JSON 동기화 또는 index 이식 등 §5.
+DEV 시작점: 기본 GPS(내 위치 주변), 버튼「시청으로 이동」점등↔「내 위치로 이동».
+레이어 패널: 시/농경지/위험(risk_grids)/등산로/임도 +「시 전체」fit. 약수터 대기.
+EC2 http://13.209.67.39:8000 /patrol/* . 다음: 약수터·index 이식 등 §5.
 ```
 
 ---
