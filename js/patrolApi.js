@@ -11,9 +11,22 @@ function patrolApiBase() {
 
 async function patrolFetch(path, options = {}) {
   const url = patrolApiBase() + path;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+  // 로그인 세션이 있으면 is_me 매칭용으로 전달
+  try {
+    const token = localStorage.getItem("accessToken");
+    if (token && !headers.Authorization) {
+      headers.Authorization = "Bearer " + token;
+    }
+  } catch (_) {
+    /* ignore */
+  }
   const res = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
+    headers,
   });
   const text = await res.text();
   let data = null;

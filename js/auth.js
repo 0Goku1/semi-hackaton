@@ -39,6 +39,7 @@ async function handleSignup(e) {
   const password = (document.getElementById("signup-pw") || {}).value || "";
   const gu = (document.getElementById("signup-gu") || {}).value || "";
   const region = (document.getElementById("signup-region") || {}).value || "";
+  const role = (document.getElementById("signup-role") || {}).value || "";
 
   if (!name) {
     alert("성명을 입력해 주세요.");
@@ -56,6 +57,10 @@ async function handleSignup(e) {
     alert("관리 구청과 세부 지역을 선택해 주세요.");
     return false;
   }
+  if (role !== "officer" && role !== "dev") {
+    alert("계정 역할(officer / dev)을 선택해 주세요.");
+    return false;
+  }
 
   try {
     await ApiClient.signup({
@@ -64,8 +69,13 @@ async function handleSignup(e) {
       name,
       gu,
       region,
+      role,
     });
-    alert("회원가입이 완료되었습니다. 로그인해 주세요.");
+    alert(
+      role === "dev"
+        ? "개발자 계정이 생성되었습니다. 로그인해 주세요."
+        : "회원가입이 완료되었습니다. 로그인해 주세요."
+    );
     window.location.replace("login.html");
   } catch (err) {
     alert(err.message || "회원가입에 실패했습니다.");

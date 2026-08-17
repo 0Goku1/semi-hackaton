@@ -30,6 +30,10 @@ CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if 
 
 LOGIN_ID_RE = re.compile(r"^[A-Za-z0-9_]{4,20}$")
 PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,64}$")
+ALLOWED_ROLES = frozenset({"officer", "dev", "admin"})
+# 가입 시 기본 근무 좌표 (화성시청)
+DEFAULT_LAT = 37.1995372034835
+DEFAULT_LNG = 126.831477350332
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -51,6 +55,7 @@ class SignupIn(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     gu: str
     region: str
+    role: str = "officer"  # officer | dev (admin 은 시드/수동만)
 
 
 class LoginIn(BaseModel):
@@ -64,6 +69,7 @@ class UserOut(BaseModel):
     name: str
     gu: str
     region: str
+    role: str = "officer"
 
 
 class TokenOut(BaseModel):
@@ -154,7 +160,11 @@ def row_to_user(row) -> UserOut:
         name=row["name"],
         gu=row["gu"],
         region=row["region"],
+        role=row.get("role") or "officer",
     )
+
+
+USER_SELECT = "id, login_id, name, gu, region, role"
 
 
 def get_current_user(
@@ -171,13 +181,56 @@ def get_current_user(
     with get_conn() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
             cur.execute(
-                "SELECT id, login_id, name, gu, region FROM users WHERE id = %s",
+                f"SELECT {USER_SELECT} FROM users WHERE id = %s",
                 (user_id,),
             )
             row = cur.fetchone()
     if not row:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "사용자를 찾을 수 없습니다.")
     return row_to_user(row)
+
+
+def get_optional_user(
+    creds: Annotated[Optional[HTTPAuthorizationCredentials], Depends(bearer_scheme)],
+) -> Optional[UserOut]:
+    if creds is None or not creds.credentials:
+        return None
+    try:
+        return get_current_user(creds)
+    except HTTPException:
+        return None
+
+
+def load_officers_from_db(me_user_id: Optional[int] = None) -> list[dict]:
+    """users 테이블 → 배정/UI용 officers 목록 (id=login_id)."""
+    with get_conn() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(
+                """
+                SELECT id, login_id, name, role, available, lat, lng
+                FROM users
+                WHERE role IN ('officer', 'dev', 'admin')
+                ORDER BY id
+                """
+            )
+            rows = cur.fetchall()
+    officers = []
+    for r in rows:
+        lat = r["lat"] if r["lat"] is not None else DEFAULT_LAT
+        lng = r["lng"] if r["lng"] is not None else DEFAULT_LNG
+        officers.append(
+            {
+                "id": r["login_id"],
+                "db_id": r["id"],
+                "name": r["name"],
+                "role": r["role"],
+                "available": bool(r["available"]) if r["available"] is not None else True,
+                "is_me": me_user_id is not None and r["id"] == me_user_id,
+                "lat": float(lat),
+                "lng": float(lng),
+            }
+        )
+    return officers
 
 
 # ----- routes -----
@@ -226,6 +279,9 @@ def signup(body: SignupIn):
     validate_credentials(body.login_id, body.password)
     if not body.gu or not body.region:
         raise HTTPException(400, "관리 구청과 세부 지역을 선택해 주세요.")
+    role = (body.role or "officer").strip().lower()
+    if role not in ("officer", "dev"):
+        raise HTTPException(400, "역할은 officer 또는 dev 만 선택할 수 있습니다.")
 
     password_hash = hash_password(body.password)
     try:
@@ -233,11 +289,23 @@ def signup(body: SignupIn):
             with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
                 cur.execute(
                     """
-                    INSERT INTO users (login_id, password_hash, name, gu, region)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id, login_id, name, gu, region
+                    INSERT INTO users (
+                      login_id, password_hash, name, gu, region,
+                      role, available, lat, lng
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, TRUE, %s, %s)
+                    RETURNING id, login_id, name, gu, region, role
                     """,
-                    (body.login_id, password_hash, body.name.strip(), body.gu, body.region),
+                    (
+                        body.login_id,
+                        password_hash,
+                        body.name.strip(),
+                        body.gu,
+                        body.region,
+                        role,
+                        DEFAULT_LAT,
+                        DEFAULT_LNG,
+                    ),
                 )
                 row = cur.fetchone()
             conn.commit()
@@ -264,8 +332,8 @@ def login(body: LoginIn):
     with get_conn() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
             cur.execute(
-                """
-                SELECT id, login_id, password_hash, name, gu, region
+                f"""
+                SELECT password_hash, {USER_SELECT}
                 FROM users WHERE login_id = %s
                 """,
                 (body.login_id,),
@@ -301,10 +369,10 @@ def update_me(
     with get_conn() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
             cur.execute(
-                """
+                f"""
                 UPDATE users SET name = %s, gu = %s, region = %s
                 WHERE id = %s
-                RETURNING id, login_id, name, gu, region
+                RETURNING {USER_SELECT}
                 """,
                 (name, gu, region, user.id),
             )
@@ -468,88 +536,157 @@ def put_risk_grids(body: dict):
 
 
 @app.get("/patrol/officers")
-def get_officers():
-    if not OFFICERS_PATH.exists():
-        raise HTTPException(404, "officers.json 없음")
-    return json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
+def get_officers(
+    user: Annotated[Optional[UserOut], Depends(get_optional_user)] = None,
+):
+    me_id = user.id if user else None
+    officers = load_officers_from_db(me_id)
+    return {
+        "schema": "koriyo.officers.v1",
+        "source": "users",
+        "officers": officers,
+    }
 
 
 @app.put("/patrol/officers")
-def put_officers(body: dict):
-    from patrol_core import save_json
-
-    save_json(OFFICERS_PATH, body)
-    return {"ok": True, "count": len(body.get("officers", []))}
+def put_officers(_body: dict):
+    raise HTTPException(
+        410,
+        "officers.json 일괄 교체는 폐기되었습니다. users 테이블·회원가입을 사용하세요.",
+    )
 
 
 @app.patch("/patrol/officers/{officer_id}")
 def patch_officer(officer_id: str, body: dict):
-    data = json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
-    found = False
-    for o in data.get("officers", []):
-        if o["id"] == officer_id:
-            o.update({k: v for k, v in body.items() if k in ("available", "lat", "lng", "name")})
-            found = True
-            break
-    if not found:
+    """officer_id = login_id. available / lat / lng / name 갱신."""
+    allowed = {k: v for k, v in body.items() if k in ("available", "lat", "lng", "name")}
+    if not allowed:
+        raise HTTPException(400, "변경할 필드 없음 (available, lat, lng, name)")
+    sets = []
+    vals = []
+    for k, v in allowed.items():
+        sets.append(f"{k} = %s")
+        vals.append(v)
+    vals.append(officer_id)
+    with get_conn() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(
+                f"""
+                UPDATE users SET {", ".join(sets)}
+                WHERE login_id = %s
+                RETURNING id, login_id, name, role, available, lat, lng
+                """,
+                vals,
+            )
+            row = cur.fetchone()
+        conn.commit()
+    if not row:
         raise HTTPException(404, "officer not found")
-    from patrol_core import save_json
-
-    save_json(OFFICERS_PATH, data)
-    return {"ok": True, "officer": next(o for o in data["officers"] if o["id"] == officer_id)}
+    return {
+        "ok": True,
+        "officer": {
+            "id": row["login_id"],
+            "name": row["name"],
+            "role": row["role"],
+            "available": bool(row["available"]),
+            "is_me": False,
+            "lat": float(row["lat"] if row["lat"] is not None else DEFAULT_LAT),
+            "lng": float(row["lng"] if row["lng"] is not None else DEFAULT_LNG),
+        },
+    }
 
 
 class OfficerAddIn(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     available: bool = True
-    lat: float = 37.1995
-    lng: float = 126.8312
-    is_me: bool = False
+    lat: float = DEFAULT_LAT
+    lng: float = DEFAULT_LNG
+    login_id: Optional[str] = None
+    password: str = "Officer1pass"
+    gu: str = "효행구"
+    region: str = "봉담읍"
 
 
 @app.post("/patrol/officers/add")
 def add_officer(body: OfficerAddIn):
-    from patrol_core import save_json
+    """DEV: users에 officer 역할 계정 추가."""
+    login_id = (body.login_id or "").strip()
+    if not login_id:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM users WHERE login_id LIKE 'officer%'"
+                )
+                n = int(cur.fetchone()[0]) + 1
+        login_id = f"officer{n:02d}"
+    if not LOGIN_ID_RE.match(login_id):
+        raise HTTPException(400, "login_id 형식이 올바르지 않습니다.")
+    if not PASSWORD_RE.match(body.password):
+        raise HTTPException(400, "password 형식이 올바르지 않습니다.")
 
-    if not OFFICERS_PATH.exists():
-        data = {"schema": "koriyo.officers.v1", "officers": []}
-    else:
-        data = json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
-    officers = data.setdefault("officers", [])
-    n = len(officers) + 1
-    oid = f"OFF_{n:03d}"
-    while any(o.get("id") == oid for o in officers):
-        n += 1
-        oid = f"OFF_{n:03d}"
-    if body.is_me:
-        for o in officers:
-            o["is_me"] = False
-    row = {
-        "id": oid,
-        "name": body.name.strip(),
-        "available": body.available,
-        "is_me": body.is_me,
-        "lat": body.lat,
-        "lng": body.lng,
+    try:
+        with get_conn() as conn:
+            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO users (
+                      login_id, password_hash, name, gu, region,
+                      role, available, lat, lng
+                    ) VALUES (%s, %s, %s, %s, %s, 'officer', %s, %s, %s)
+                    RETURNING id, login_id, name, role, available, lat, lng
+                    """,
+                    (
+                        login_id,
+                        hash_password(body.password),
+                        body.name.strip(),
+                        body.gu,
+                        body.region,
+                        body.available,
+                        body.lat,
+                        body.lng,
+                    ),
+                )
+                row = cur.fetchone()
+            conn.commit()
+    except psycopg.Error as exc:
+        if getattr(exc, "sqlstate", None) == "23505":
+            raise HTTPException(409, "이미 있는 login_id") from exc
+        raise HTTPException(503, f"DB 오류: {exc}") from exc
+
+    return {
+        "ok": True,
+        "officer": {
+            "id": row["login_id"],
+            "name": row["name"],
+            "role": row["role"],
+            "available": bool(row["available"]),
+            "is_me": False,
+            "lat": float(row["lat"]),
+            "lng": float(row["lng"]),
+        },
     }
-    officers.append(row)
-    save_json(OFFICERS_PATH, data)
-    return {"ok": True, "officer": row}
 
 
 @app.delete("/patrol/officers/{officer_id}")
 def delete_officer(officer_id: str):
-    from patrol_core import save_json
-
-    if not OFFICERS_PATH.exists():
-        raise HTTPException(404, "officers.json 없음")
-    data = json.loads(OFFICERS_PATH.read_text(encoding="utf-8"))
-    before = len(data.get("officers", []))
-    data["officers"] = [o for o in data.get("officers", []) if o.get("id") != officer_id]
-    if len(data["officers"]) == before:
-        raise HTTPException(404, "officer not found")
-    save_json(OFFICERS_PATH, data)
-    return {"ok": True, "count": len(data["officers"])}
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM users
+                WHERE login_id = %s AND role = 'officer'
+                RETURNING id
+                """,
+                (officer_id,),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    if not row:
+        raise HTTPException(
+            404,
+            "삭제 실패 (없거나 officer 역할이 아님 — dev/admin 은 삭제 불가)",
+        )
+    return {"ok": True, "deleted": officer_id}
 
 
 @app.get("/patrol/pool")
@@ -565,7 +702,10 @@ def reset_pool():
 
 
 @app.post("/patrol/assign")
-def patrol_assign(body: AssignIn):
+def patrol_assign(
+    body: AssignIn,
+    user: Annotated[Optional[UserOut], Depends(get_optional_user)] = None,
+):
     """가용 요원 × 위험격자 TOP+OR-Tools 배정. 완료된 격자는 후보에서 제외."""
     try:
         from patrol_core import assign_patrol, load_json, resolve_risk_grids
@@ -579,10 +719,10 @@ def patrol_assign(body: AssignIn):
             raise HTTPException(404, "risk_grids.json 없음")
         grids = resolve_risk_grids(load_json(RISK_PATH))
 
-    if not OFFICERS_PATH.exists():
-        raise HTTPException(404, "officers.json 없음")
-    officers_doc = load_json(OFFICERS_PATH)
-    officers = officers_doc.get("officers", [])
+    me_id = user.id if user else None
+    officers = load_officers_from_db(me_id)
+    if not officers:
+        raise HTTPException(404, "배정 가능한 요원이 users 에 없습니다.")
 
     # 내 시작점 반영 (프론트가 보낸 좌표 그대로 — DEV 시청/실GPS 선택은 클라이언트)
     if body.me_lat is not None and body.me_lng is not None:
@@ -590,6 +730,15 @@ def patrol_assign(body: AssignIn):
             if o.get("is_me"):
                 o["lat"] = body.me_lat
                 o["lng"] = body.me_lng
+                break
+        else:
+            # 로그인 없이 배정: 가용 1명을 임시 is_me
+            for o in officers:
+                if o.get("available"):
+                    o["is_me"] = True
+                    o["lat"] = body.me_lat
+                    o["lng"] = body.me_lng
+                    break
 
     pool = _read_pool()
     completed = set(pool.get("completed_grid_ids") or [])

@@ -216,14 +216,15 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 - [ ] `index.html` 메인에 DEV 파이프라인 이식
 - [ ] 개발 완료 후 `routeDevStartPos` DEV 모듈 제거
 - [x] HTML 정리: `patrol.html` 등 구 순찰 찌꺼기 삭제 · 페이지 맵 §6-E
-- [ ] users DB 연동 (role/available/lat/lng · 시드 30 · officers.json 폐기)
-  - 시드 스크립트: `scripts/seed_patrol_officers.py` (EC2에서 `--yes` 실행)
-  - 다음: signup HTML role 옵션 → 본인 `dev` 계정 가입 → `/patrol/officers`를 DB로 교체
+- [x] users DB 연동 (role/available/lat/lng · 시드 30 · `/patrol/officers`=users)
+  - 시드: `scripts/seed_patrol_officers.py`
+  - signup: role `officer`|`dev` · 본인 계정은 앱에서 가입
+  - officers.json 배정 경로 폐기
 - [ ] 접근 정책(enter/near/remote)을 `patrol_core`에 반영
 
 ### 의도적 비범위
 - 위험 score ML/기상 산출 (타 파트 JSON 공급)
-- 근무 출퇴근 실시스템 (지금은 officers.json 토글)
+- 근무 출퇴근 실시스템 (지금은 users.available 토글)
 
 ---
 

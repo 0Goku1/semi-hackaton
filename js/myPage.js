@@ -160,6 +160,13 @@ async function loadMyPageData() {
       el.value = currentUser.name || currentUser.login_id || "";
     });
 
+    const roleEl = document.getElementById("user-role-field");
+    if (roleEl) {
+      const r = currentUser.role || "officer";
+      roleEl.value =
+        r === "dev" ? "dev (개발자)" : r === "admin" ? "admin" : "officer (순찰 요원)";
+    }
+
     const guSelect = document.getElementById("modal-signup-gu");
     if (guSelect && currentUser.gu) {
       guSelect.value = currentUser.gu;

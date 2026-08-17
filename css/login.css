@@ -11,16 +11,19 @@ body.report-body {
     overflow: hidden;
 }
 
-/* 모바일 프레임 */
+/* 모바일 프레임 — 회원가입 필드가 늘어도 스크롤·버튼 클릭 가능 */
 .mobile-container {
     width: 100%;
     height: 100%;
     background: #FFFFFF !important;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    padding: 40px 24px;
+    justify-content: flex-start;
+    padding: 28px 24px 40px;
     box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 /* 로고 */
@@ -29,14 +32,15 @@ body.report-body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-bottom: 36px;
+    margin-bottom: 20px;
     text-align: center;
+    flex-shrink: 0;
 }
 
 /* 로고 이미지 박스 */
 .logo-image-box {
-    width: 130px;
-    height: 130px;
+    width: 96px;
+    height: 96px;
     background: #FFFFFF;
     border: 1.5px solid #FF6B00;
     border-radius: 50%; 
@@ -72,10 +76,11 @@ body.report-body {
 .login-form {
     width: 100%;
     margin-bottom: 24px;
+    flex-shrink: 0;
 }
 
 .input-group {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 /* 입력창 */
@@ -116,11 +121,16 @@ body.report-body {
     font-size: 16px !important;
     font-weight: 700 !important;
     cursor: pointer !important;
-    margin-top: 20px !important;
+    margin-top: 16px !important;
+    margin-bottom: 8px !important;
     opacity: 1 !important;                 
     visibility: visible !important;        
     box-shadow: 0 6px 16px rgba(255, 107, 0, 0.25) !important;
     transition: all 0.2s ease;
+    position: relative;
+    z-index: 2;
+    pointer-events: auto !important;
+    flex-shrink: 0;
 }
 
 /* 로그인 버튼 hover */
