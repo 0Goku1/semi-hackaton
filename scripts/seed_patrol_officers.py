@@ -89,6 +89,11 @@ def hash_password(password: str) -> str:
 
 
 MIGRATE_SQL = [
+    # EC2 구 스키마가 varchar(8) 등이면 INSERT 전에 확장
+    "ALTER TABLE users ALTER COLUMN login_id TYPE VARCHAR(20)",
+    "ALTER TABLE users ALTER COLUMN name TYPE VARCHAR(50)",
+    "ALTER TABLE users ALTER COLUMN gu TYPE VARCHAR(20)",
+    "ALTER TABLE users ALTER COLUMN region TYPE VARCHAR(30)",
     """
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'officer'
