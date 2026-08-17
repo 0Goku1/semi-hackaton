@@ -23,8 +23,24 @@ STATEMENTS = [
         name            VARCHAR(50) NOT NULL,
         gu              VARCHAR(20) NOT NULL,
         region          VARCHAR(30) NOT NULL,
+        role            VARCHAR(20) NOT NULL DEFAULT 'officer',
+        available       BOOLEAN     NOT NULL DEFAULT TRUE,
+        lat             DOUBLE PRECISION,
+        lng             DOUBLE PRECISION,
         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+    """,
+    """
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'officer'
+    """,
+    """
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS available BOOLEAN NOT NULL DEFAULT TRUE
+    """,
+    """
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION
+    """,
+    """
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION
     """,
     """
     CREATE TABLE IF NOT EXISTS patrol_reports (

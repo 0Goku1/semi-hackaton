@@ -5,7 +5,7 @@
 > 새 세션/다른 사람 AI에게 넘길 때 **이 파일부터** 읽히면 된다.
 >
 > 관련 상세: API `docs/PATROL_ASSIGN_API.md` · 설계 `docs/PATROL_ROUTE_OPTIMIZATION.md` · EC2 기초 `docs/EC2_DEPLOY.md`  
-> 마지막 갱신: **2026-08-17** (route-dev 레이어 토글 · 시 전체 보기)
+> 마지막 갱신: **2026-08-17** (HTML 정리 · 접근정책 임시 확정 · users DB 연동 착수)
 
 ---
 
@@ -215,7 +215,11 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 - [ ] 체크 시 즉시 전역 재TOP (현재 수동 재배정)
 - [ ] `index.html` 메인에 DEV 파이프라인 이식
 - [ ] 개발 완료 후 `routeDevStartPos` DEV 모듈 제거
-- [ ] Capacitor/`www` 메뉴에 route-dev 반영 (`npm run prepare:www` + 재빌드)
+- [x] HTML 정리: `patrol.html` 등 구 순찰 찌꺼기 삭제 · 페이지 맵 §6-E
+- [ ] users DB 연동 (role/available/lat/lng · 시드 30 · officers.json 폐기)
+  - 시드 스크립트: `scripts/seed_patrol_officers.py` (EC2에서 `--yes` 실행)
+  - 다음: signup HTML role 옵션 → 본인 `dev` 계정 가입 → `/patrol/officers`를 DB로 교체
+- [ ] 접근 정책(enter/near/remote)을 `patrol_core`에 반영
 
 ### 의도적 비범위
 - 위험 score ML/기상 산출 (타 파트 JSON 공급)
@@ -256,7 +260,28 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 | 약수터 | disabled · 데이터 대기 |
 | **시 전체** 버튼 | `gridLayer.fitAll()` — GPS 진입 후 시 경계 한눈에 |
 
-파일: `route-dev.html` `#layer-panel` · `js/routeDevGridLayer.js` `setLayers` · `js/route-dev.js` `applyLayerVisibility` / `fitCityView`.
+### 6-D. 접근·시간 정책 (임시 확정, 숫자 변경 가능)
+| 유형 | 망 스냅 거리 | 배정 | 체류 |
+|------|--------------|------|------|
+| enter | ≤ 300 m | 도보 진입 순찰 | 15분 |
+| near | 300 m ~ 1 km | 근접 감시 | **8분** |
+| remote | \> 1 km | **배정 제외** (원거리 감시 후보) | 0 |
+
+- `is_me` = **로그인한 유저** (DB 플래그 아님).
+- 요원 정본 = PostgreSQL `users` (+ role/available/lat/lng 확장 예정). `officers.json` 폐기 방향.
+
+### 6-E. 프론트 HTML 정본 (2026-08-17 정리)
+| 파일 | 역할 |
+|------|------|
+| `index.html` | 메인 지도 · 구 동선찾기(표시) · 메뉴 |
+| `login.html` / `signup.html` | 인증 |
+| `myPage.html` / `notifications.html` / `my-reports.html` | 프로필·알림·보고서 목록 |
+| `route-dev.html` | 동선·배정 DEV |
+| `patrol-run.html` | 격자 체크 순찰 |
+| `patrol-report.html` | 일괄 보고서 작성 |
+
+**삭제됨:** `patrol.html`(구 순찰), `js/patrol-app.js`, `js/routeAssign.js`, `js/routeDevSolver.js`.  
+index 「순찰 시작」→ `route-dev.html`.
 
 ---
 

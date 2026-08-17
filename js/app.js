@@ -339,7 +339,8 @@ function setupPanelInteraction() {
       state = "loading";
       await simulateRouteDrawing();
     } else if (state === "ready") {
-      window.location.href = "patrol.html";
+      // 구 patrol.html 제거 → 동선 DEV 파이프라인으로 진입
+      window.location.href = "route-dev.html";
     }
   });
 }
