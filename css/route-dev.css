@@ -686,6 +686,24 @@
   font-weight: 700;
   color: var(--text-sub);
 }
+.officer-source-hint {
+  margin: 0;
+  padding: 0 16px 6px;
+  font-size: 10px;
+  color: #888;
+  flex-shrink: 0;
+}
+.officer-role {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #666;
+  background: #f0f0f0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  vertical-align: middle;
+}
 .officer-filter {
   border: 1px solid var(--border-color);
   background: #f7f7f7;

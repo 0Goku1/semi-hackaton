@@ -476,11 +476,10 @@ def list_my_reports(user: Annotated[UserOut, Depends(get_current_user)]):
     ]
 
 
-# ----- 순찰 배정 (DB 불필요 · TOP + OR-Tools) -----
+# ----- 순찰 배정 (요원 = users 테이블 · 위험격자·풀 = 파일 JSON) -----
 
 PROC_DIR = Path(os.getenv("DATA_ROOT", "").strip() or Path(__file__).resolve().parents[1]) / "data" / "processed"
 RISK_PATH = PROC_DIR / "risk_grids.json"
-OFFICERS_PATH = PROC_DIR / "officers.json"
 POOL_PATH = PROC_DIR / "patrol_pool_state.json"
 
 

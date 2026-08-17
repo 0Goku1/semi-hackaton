@@ -289,7 +289,7 @@ index 「순찰 시작」→ `route-dev.html`.
 ## 7. 프론트 “내” 표시와의 관계
 
 - 지도 me 마커 기본 표시명: `route-dev.js`에서 `getDisplayUserName("정승우")` 등.  
-- 배정의 `is_me`는 **`officers.json`의 `is_me: true`** 가 소스 오브 트루스.  
+- 배정의 `is_me`는 **로그인한 JWT 유저** (`users.id`) 와 매칭. officers.json 미사용.  
 - 로그인 유저와 officers `is_me` 자동 동기화는 **아직 없음**.
 
 ---

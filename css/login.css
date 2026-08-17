@@ -142,14 +142,40 @@ body.report-body {
     transform: scale(0.98);
 }
 
-/* 하단 이동 링크 */
+.signup-status {
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.signup-status.is-error {
+    background: #ffebee;
+    color: #b71c1c;
+    border: 1px solid #ffcdd2;
+}
+
+.signup-status.is-ok {
+    background: #e8f5e9;
+    color: #1b5e20;
+    border: 1px solid #c8e6c9;
+}
+
+.signup-status[hidden] {
+    display: none !important;
+}
+
 .signup-links {
     display: flex;
     justify-content: center;
     align-items: center;
     margin-top: 8px;
+    margin-bottom: 24px;
     color: #495057;
     font-size: 14px;
+    flex-shrink: 0;
 }
 
 /* 전환 링크 */

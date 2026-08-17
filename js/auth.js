@@ -31,9 +31,28 @@ function updateDongOptions() {
   }
 }
 
+function setSignupStatus(message, kind) {
+  const el = document.getElementById("signup-status");
+  if (!el) {
+    if (message) alert(message);
+    return;
+  }
+  if (!message) {
+    el.hidden = true;
+    el.textContent = "";
+    el.classList.remove("is-error", "is-ok");
+    return;
+  }
+  el.hidden = false;
+  el.textContent = message;
+  el.classList.toggle("is-error", kind === "error");
+  el.classList.toggle("is-ok", kind === "ok");
+}
+
 async function handleSignup(e) {
   if (e) e.preventDefault();
 
+  const submitBtn = document.getElementById("signup-submit-btn");
   const name = (document.getElementById("user_name") || {}).value?.trim() || "";
   const loginId = (document.getElementById("signup-id") || {}).value?.trim() || "";
   const password = (document.getElementById("signup-pw") || {}).value || "";
@@ -41,25 +60,39 @@ async function handleSignup(e) {
   const region = (document.getElementById("signup-region") || {}).value || "";
   const role = (document.getElementById("signup-role") || {}).value || "";
 
+  setSignupStatus("", null);
+
   if (!name) {
-    alert("성명을 입력해 주세요.");
+    setSignupStatus("성명을 입력해 주세요.", "error");
     return false;
   }
   if (!AuthValidation.isValidLoginId(loginId)) {
-    alert(AuthValidation.MESSAGES.loginId);
+    setSignupStatus(AuthValidation.MESSAGES.loginId, "error");
+    return false;
+  }
+  if (/^officer\d+$/i.test(loginId)) {
+    setSignupStatus(
+      "officer01~30 은 시드 요원 전용입니다. 다른 아이디를 쓰세요.",
+      "error"
+    );
     return false;
   }
   if (!AuthValidation.isValidPassword(password)) {
-    alert(AuthValidation.MESSAGES.password);
+    setSignupStatus(AuthValidation.MESSAGES.password, "error");
     return false;
   }
   if (!gu || !region) {
-    alert("관리 구청과 세부 지역을 선택해 주세요.");
+    setSignupStatus("관리 구청과 세부 지역을 선택해 주세요.", "error");
     return false;
   }
   if (role !== "officer" && role !== "dev") {
-    alert("계정 역할(officer / dev)을 선택해 주세요.");
+    setSignupStatus("계정 역할(officer / dev)을 선택해 주세요.", "error");
     return false;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "가입 중…";
   }
 
   try {
@@ -71,35 +104,99 @@ async function handleSignup(e) {
       region,
       role,
     });
-    alert(
-      role === "dev"
-        ? "개발자 계정이 생성되었습니다. 로그인해 주세요."
-        : "회원가입이 완료되었습니다. 로그인해 주세요."
-    );
-    window.location.replace("login.html");
+    setSignupStatus("가입 완료. 로그인 화면으로 이동합니다…", "ok");
+    setTimeout(() => {
+      window.location.replace("login.html");
+    }, 600);
   } catch (err) {
-    alert(err.message || "회원가입에 실패했습니다.");
+    const status = err && err.status;
+    let msg = (err && err.message) || "회원가입에 실패했습니다.";
+    if (status === 409) {
+      msg =
+        "이미 사용 중인 아이디입니다. 다른 아이디로 가입하거나, 해당 아이디로 로그인해 주세요.";
+    } else if (/Failed to fetch|네트워크|연결할 수 없/i.test(msg)) {
+      msg = "서버에 연결할 수 없습니다. EC2 API(uvicorn)가 켜져 있는지 확인하세요.";
+    }
+    setSignupStatus(msg, "error");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "가입하기";
+    }
   }
   return false;
+}
+
+function setLoginStatus(message, kind) {
+  const el = document.getElementById("login-status");
+  if (!el) {
+    if (message) alert(message);
+    return;
+  }
+  if (!message) {
+    el.hidden = true;
+    el.textContent = "";
+    el.classList.remove("is-error", "is-ok");
+    return;
+  }
+  el.hidden = false;
+  el.textContent = message;
+  el.classList.toggle("is-error", kind === "error");
+  el.classList.toggle("is-ok", kind === "ok");
+}
+
+function warnIfFileProtocol() {
+  if (location.protocol !== "file:") return;
+  setLoginStatus(
+    "지금 file:// 로 열려 있습니다. 로그인이 불안정합니다. http://localhost:3000/login.html 로 여세요.",
+    "error"
+  );
 }
 
 async function handleLogin(e) {
   if (e) e.preventDefault();
 
+  const submitBtn = document.getElementById("login-submit-btn");
   const loginId = (document.getElementById("login-id") || {}).value?.trim() || "";
   const password = (document.getElementById("login-pw") || {}).value || "";
 
+  setLoginStatus("", null);
+
   if (!loginId || !password) {
-    alert("아이디와 비밀번호를 입력해 주세요.");
+    setLoginStatus("아이디와 비밀번호를 입력해 주세요.", "error");
     return false;
+  }
+
+  if (typeof SECRETS === "undefined" || !SECRETS.API_BASE_URL) {
+    setLoginStatus("js/secrets.js 의 API_BASE_URL 이 없습니다.", "error");
+    return false;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "로그인 중…";
   }
 
   try {
     const data = await ApiClient.login({ login_id: loginId, password });
-    ApiClient.setSession(data.access_token, data.user);
-    window.location.replace("index.html");
+    if (!data || !data.access_token) {
+      throw new Error("서버 응답에 access_token 이 없습니다.");
+    }
+    ApiClient.setSession(data.access_token, data.user || null);
+    setLoginStatus("로그인 성공. 메인으로 이동합니다…", "ok");
+    setTimeout(() => {
+      window.location.replace("index.html");
+    }, 400);
   } catch (err) {
-    alert(err.message || "로그인에 실패했습니다.");
+    let msg = (err && err.message) || "로그인에 실패했습니다.";
+    if (/Failed to fetch|네트워크|연결할 수 없/i.test(msg)) {
+      msg =
+        "서버에 연결할 수 없습니다. EC2 uvicorn 과 API_BASE_URL 을 확인하세요.";
+    }
+    setLoginStatus(msg, "error");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "로그인";
+    }
   }
   return false;
 }
@@ -111,6 +208,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  warnIfFileProtocol();
   const guSelect = document.getElementById("signup-gu");
   if (guSelect && guSelect.value) updateDongOptions();
 });

@@ -609,7 +609,7 @@ function openOfficerSheet() {
   document.getElementById("sheet-backdrop")?.classList.add("open");
   closeGridInfo();
   closeRankDetail();
-  renderOfficers();
+  loadOfficersSafe();
 }
 
 function closeOfficerSheet() {
@@ -637,8 +637,23 @@ function cycleOfficerFilter() {
 function renderOfficers() {
   const list = document.getElementById("officer-list");
   const sum = document.getElementById("officer-summary");
-  if (!list || !officersDoc) return;
+  const hint = document.getElementById("officer-source-hint");
+  if (!list) return;
+
+  if (!officersDoc) {
+    list.innerHTML =
+      `<li class="officer-row"><div class="meta">요원 목록을 불러오지 못했습니다. API·로그인을 확인하세요.</div></li>`;
+    if (sum) sum.textContent = "불러오기 실패";
+    if (hint) hint.textContent = "GET /patrol/officers 실패";
+    return;
+  }
+
   const officers = officersDoc.officers || [];
+  const src = officersDoc.source || "users";
+  if (hint) {
+    hint.textContent = `출처: ${src} (JSON 파일 아님) · ${officers.length}명`;
+  }
+
   const avail = officers.filter((o) => o.available).length;
   const filtered = officers.filter((o) => {
     if (officerFilter === "available") return !!o.available;
@@ -651,20 +666,22 @@ function renderOfficers() {
       `<li class="officer-row"><div class="meta">표시할 요원이 없습니다</div></li>`;
   } else {
     list.innerHTML = filtered
-      .map(
-        (o) => `<li class="officer-row">
+      .map((o) => {
+        const role = o.role || "officer";
+        const canDelete = role === "officer" && !o.is_me;
+        return `<li class="officer-row">
       <div>
-        <div class="name">${o.name}${o.is_me ? " (나)" : ""}</div>
+        <div class="name">${o.name}${o.is_me ? " (나)" : ""} <span class="officer-role">${role}</span></div>
         <div class="meta">${o.id}</div>
       </div>
       <div class="officer-row-actions">
         <button type="button" class="officer-toggle ${o.available ? "on" : "off"}" data-id="${o.id}">
           ${o.available ? "가용" : "비가용"}
         </button>
-        <button type="button" class="officer-del" data-del="${o.id}" aria-label="삭제" ${o.is_me ? "disabled" : ""}>×</button>
+        <button type="button" class="officer-del" data-del="${o.id}" aria-label="삭제" ${canDelete ? "" : "disabled"}>×</button>
       </div>
-    </li>`
-      )
+    </li>`;
+      })
       .join("");
   }
 
@@ -691,11 +708,10 @@ function renderOfficers() {
   list.querySelectorAll(".officer-del").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.del;
-      if (!id || !confirm(`요원 ${id} 을(를) 삭제할까요?`)) return;
+      if (!id || !confirm(`DB에서 요원 ${id} 을(를) 삭제할까요? (users 행 삭제)`)) return;
       try {
         await PatrolApi.deleteOfficer(id);
-        officersDoc.officers = officers.filter((x) => x.id !== id);
-        renderOfficers();
+        await loadOfficersSafe();
       } catch (e) {
         alert("삭제 실패: " + e.message);
       }
@@ -710,6 +726,7 @@ async function loadOfficersSafe() {
   } catch (e) {
     console.warn("[officers]", e);
     officersDoc = null;
+    renderOfficers();
   }
 }
 
@@ -720,17 +737,14 @@ async function onAddOfficer(e) {
   const name = (nameEl?.value || "").trim();
   if (!name) return;
   try {
-    const res = await PatrolApi.addOfficer({
+    await PatrolApi.addOfficer({
       name,
       available: !!availEl?.checked,
       lat: myPos?.lat ?? 37.1995,
       lng: myPos?.lng ?? 126.8312,
-      is_me: false,
     });
-    if (!officersDoc) officersDoc = { officers: [] };
-    officersDoc.officers.push(res.officer);
     if (nameEl) nameEl.value = "";
-    renderOfficers();
+    await loadOfficersSafe();
     const listEl = document.getElementById("officer-list");
     if (listEl) listEl.scrollTop = listEl.scrollHeight;
   } catch (err) {
