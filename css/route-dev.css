@@ -688,21 +688,14 @@
 }
 .officer-source-hint {
   margin: 0;
-  padding: 0 16px 6px;
-  font-size: 10px;
-  color: #888;
+  padding: 4px 16px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
   flex-shrink: 0;
 }
-.officer-role {
-  display: inline-block;
-  margin-left: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  color: #666;
-  background: #f0f0f0;
-  padding: 1px 6px;
-  border-radius: 6px;
-  vertical-align: middle;
+#officer-summary.hidden {
+  display: none !important;
 }
 .officer-filter {
   border: 1px solid var(--border-color);

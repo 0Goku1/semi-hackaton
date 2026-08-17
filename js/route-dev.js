@@ -642,19 +642,16 @@ function renderOfficers() {
 
   if (!officersDoc) {
     list.innerHTML =
-      `<li class="officer-row"><div class="meta">요원 목록을 불러오지 못했습니다. API·로그인을 확인하세요.</div></li>`;
-    if (sum) sum.textContent = "불러오기 실패";
-    if (hint) hint.textContent = "GET /patrol/officers 실패";
+      `<li class="officer-row"><div class="meta">요원 목록을 불러오지 못했습니다.</div></li>`;
+    if (hint) hint.textContent = "요원 목록 총 —명";
     return;
   }
 
   const officers = officersDoc.officers || [];
-  const src = officersDoc.source || "users";
   if (hint) {
-    hint.textContent = `출처: ${src} (JSON 파일 아님) · ${officers.length}명`;
+    hint.textContent = `요원 목록 총 ${officers.length}명`;
   }
 
-  const avail = officers.filter((o) => o.available).length;
   const filtered = officers.filter((o) => {
     if (officerFilter === "available") return !!o.available;
     if (officerFilter === "unavailable") return !o.available;
@@ -671,7 +668,7 @@ function renderOfficers() {
         const canDelete = role === "officer" && !o.is_me;
         return `<li class="officer-row">
       <div>
-        <div class="name">${o.name}${o.is_me ? " (나)" : ""} <span class="officer-role">${role}</span></div>
+        <div class="name">${o.name}${o.is_me ? " (나)" : ""}</div>
         <div class="meta">${o.id}</div>
       </div>
       <div class="officer-row-actions">
@@ -683,10 +680,6 @@ function renderOfficers() {
     </li>`;
       })
       .join("");
-  }
-
-  if (sum) {
-    sum.textContent = `총 ${officers.length} · 가용 ${avail} · 비가용 ${officers.length - avail}`;
   }
 
   list.querySelectorAll(".officer-toggle").forEach((btn) => {

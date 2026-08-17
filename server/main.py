@@ -202,14 +202,14 @@ def get_optional_user(
 
 
 def load_officers_from_db(me_user_id: Optional[int] = None) -> list[dict]:
-    """users 테이블 → 배정/UI용 officers 목록 (id=login_id)."""
+    """users 중 role=officer 만 배정/요원 목록에 포함 (dev·admin 제외)."""
     with get_conn() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
             cur.execute(
                 """
                 SELECT id, login_id, name, role, available, lat, lng
                 FROM users
-                WHERE role IN ('officer', 'dev', 'admin')
+                WHERE role = 'officer'
                 ORDER BY id
                 """
             )
@@ -225,6 +225,7 @@ def load_officers_from_db(me_user_id: Optional[int] = None) -> list[dict]:
                 "name": r["name"],
                 "role": r["role"],
                 "available": bool(r["available"]) if r["available"] is not None else True,
+                # 로그인한 사람이 officer 일 때만 is_me (dev 는 풀 밖)
                 "is_me": me_user_id is not None and r["id"] == me_user_id,
                 "lat": float(lat),
                 "lng": float(lng),
@@ -542,7 +543,7 @@ def get_officers(
     officers = load_officers_from_db(me_id)
     return {
         "schema": "koriyo.officers.v1",
-        "source": "users",
+        "source": "users.officer",
         "officers": officers,
     }
 
@@ -723,7 +724,8 @@ def patrol_assign(
     if not officers:
         raise HTTPException(404, "배정 가능한 요원이 users 에 없습니다.")
 
-    # 내 시작점 반영 (프론트가 보낸 좌표 그대로 — DEV 시청/실GPS 선택은 클라이언트)
+    # 시작점: 로그인이 officer 이면 그 요원 is_me.
+    # dev/미로그인 이면 배정 풀(officer) 중 가용 1명에 GPS/시청 좌표를 임시 부여(시연용).
     if body.me_lat is not None and body.me_lng is not None:
         for o in officers:
             if o.get("is_me"):
@@ -731,7 +733,6 @@ def patrol_assign(
                 o["lng"] = body.me_lng
                 break
         else:
-            # 로그인 없이 배정: 가용 1명을 임시 is_me
             for o in officers:
                 if o.get("available"):
                     o["is_me"] = True

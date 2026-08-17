@@ -114,12 +114,12 @@
     <section id="officer-sheet" aria-hidden="true">
       <div class="detail-handle"></div>
       <div class="detail-head">
-        <h3>순찰 요원 (DB users)</h3>
+        <h3>순찰 요원</h3>
         <button type="button" class="detail-close" id="btn-close-officers" aria-label="닫기">×</button>
       </div>
-      <p class="officer-source-hint" id="officer-source-hint">GET /patrol/officers · PostgreSQL users</p>
+      <p class="officer-source-hint" id="officer-source-hint">요원 총 —명</p>
       <div class="officer-toolbar">
-        <span id="officer-summary">—</span>
+        <span id="officer-summary" class="hidden" aria-hidden="true"></span>
         <button type="button" class="officer-filter" id="btn-officer-filter" data-mode="all">전체</button>
       </div>
       <ul id="officer-list"></ul>
