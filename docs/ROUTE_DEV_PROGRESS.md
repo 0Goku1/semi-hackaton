@@ -5,7 +5,7 @@
 > 새 세션/다른 사람 AI에게 넘길 때 **이 파일부터** 읽히면 된다.
 >
 > 관련 상세: API `docs/PATROL_ASSIGN_API.md` · 설계 `docs/PATROL_ROUTE_OPTIMIZATION.md` · EC2 기초 `docs/EC2_DEPLOY.md`  
-> 마지막 갱신: **2026-08-17** (HTML 정리 · 접근정책 임시 확정 · users DB 연동 착수)
+> 마지막 갱신: **2026-08-18** (접근정책 임시 15/5 + remote 제외 · patrol_core 반영)
 
 ---
 
@@ -184,7 +184,7 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 | 초록 | `trail` | 등산로·임도 |
 | 주황 점선 | `access` | 망 스냅 → 격자 중심 |
 
-`access_type`: `enter` / `near` / `remote` (필드만, UX 분기는 추후).
+`access_type`: `enter` / `near` / `remote` — **배정에 반영됨** (remote 제외, dwell 15/5). UX 분기는 다음 파트.
 
 ---
 
@@ -208,21 +208,24 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 - [x] 빨간 테두리 ↔ `risk_grids.json` 동기화 (API `/patrol/risk-grids` → 로컬 파일 폴백)
 
 ### 진행 중 / 버그
-- [ ] 약수터 레이어 (UI 자리만 · 데이터 대기)
+- [ ] **다음:** 근접/원격 감시 UX (지도·패널 `access_type` · remote 제외 건수) — §6-E
 - [ ] `KAKAO_REST_KEY` EC2 `.env` 반영 여부·차량 경로 품질 확인
-- [ ] 등산로·임도 단절(다수 컴포넌트) · 데이터 보완 (의도적 후순위)
-- [ ] 근접/원격 감시 UX
 - [ ] 체크 시 즉시 전역 재TOP (현재 수동 재배정)
 - [ ] `index.html` 메인에 DEV 파이프라인 이식
 - [ ] 개발 완료 후 `routeDevStartPos` DEV 모듈 제거
-- [x] HTML 정리: `patrol.html` 등 구 순찰 찌꺼기 삭제 · 페이지 맵 §6-E
+- [ ] 약수터 레이어 · 등산로/임도 단절 보완 (**P3 데이터 — 지금 하지 않음**)
+- [x] HTML 정리: `patrol.html` 등 구 순찰 찌꺼기 삭제 · 페이지 맵 §6-F
 - [x] users DB 연동 (role/available/lat/lng · 시드 30 · `/patrol/officers`=users)
   - 시드: `scripts/seed_patrol_officers.py`
   - signup: role `officer`|`dev` · 본인 계정은 앱에서 가입
   - officers.json 배정 경로 폐기
-- [ ] 접근 정책(enter/near/remote)을 `patrol_core`에 반영
+- [x] 접근 정책(enter/near/remote)을 `patrol_core`에 반영 — **임시 숫자 §6-D**
+  - remote `>1km` → `remote_excluded` (TOP 후보 제외)
+  - dwell: enter **15분** / near **5분**
+- [ ] 정책 숫자 최종 확정 시 §6-D-FIX 목록만 수정
 
-### 의도적 비범위
+### 의도적 비범위 / 후순위 (지금은 데이터 채우지 않음)
+- 약수터·등산로 단절 보완 · OSM 도로 — **데이터 헌트는 P3**, 정책·UX 안정화 후
 - 위험 score ML/기상 산출 (타 파트 JSON 공급)
 - 근무 출퇴근 실시스템 (지금은 users.available 토글)
 
@@ -261,17 +264,48 @@ SSH 기본은 **터미널만**. `ls` / `cat` / `curl`로 확인.
 | 약수터 | disabled · 데이터 대기 |
 | **시 전체** 버튼 | `gridLayer.fitAll()` — GPS 진입 후 시 경계 한눈에 |
 
-### 6-D. 접근·시간 정책 (임시 확정, 숫자 변경 가능)
-| 유형 | 망 스냅 거리 | 배정 | 체류 |
-|------|--------------|------|------|
-| enter | ≤ 300 m | 도보 진입 순찰 | 15분 |
-| near | 300 m ~ 1 km | 근접 감시 | **8분** |
-| remote | \> 1 km | **배정 제외** (원거리 감시 후보) | 0 |
+### 6-D. 접근·시간 정책 (**임시 운영**, 2026-08-18)
 
+| 유형 | 망 스냅 거리 | 배정 | 체류(임시) |
+|------|--------------|------|------------|
+| enter | ≤ 300 m | 도보 진입 순찰 | **15분** |
+| near | 300 m ~ 1 km | 근접 감시 | **5분** |
+| remote | \> 1 km | **배정 제외** → `remote_excluded` | 0 |
+
+- 거리 임계(300 / 1000)와 체류(15 / 5)는 **임시**. 팀 합의 후 숫자만 바꾸면 됨.
 - `is_me` = **로그인한 유저** (DB 플래그 아님).
-- 요원 정본 = PostgreSQL `users` (+ role/available/lat/lng 확장 예정). `officers.json` 폐기 방향.
+- 요원 정본 = PostgreSQL `users` (`role=officer`). `officers.json` 폐기.
 
-### 6-E. 프론트 HTML 정본 (2026-08-17 정리)
+#### 6-D-FIX. 정책 숫자 확정 시 수정할 파트 (체크리스트)
+
+숫자·임계만 바뀔 때 손대는 곳. UX/새 유형 추가는 별도.
+
+| # | 파일 / 위치 | 무엇을 |
+|---|-------------|--------|
+| 1 | `server/patrol_core.py` 상수 | `DWELL_ENTER_MIN`, `DWELL_NEAR_MIN`, `ACCESS_ENTER_M`, `ACCESS_NEAR_M` |
+| 2 | `docs/ROUTE_DEV_PROGRESS.md` §6-D | 표의 거리·체류 행 |
+| 3 | `docs/PATROL_ASSIGN_API.md` (있으면) | assign 응답 meta·dwell 설명 |
+| 4 | route-dev / patrol-run UI 카피 | “15분/5분” 하드코딩 문구가 생기면 여기 |
+| 5 | EC2 | `git pull` 후 uvicorn 재시작 (상수 반영) |
+
+프론트는 API `stops[].dwell_min` / `meta.dwell_*`를 쓰면 하드코딩 불필요.
+
+### 6-E. 다음 파트 지시 (확정)
+
+**하지 말 것:** 약수터·임도 단절·도로 OSM 등 **데이터 채우기** (후순위).
+
+**할 것 (순서 고정):**
+
+1. **배포 검증** — EC2에 이 브랜치 pull → uvicorn 재시작 → `POST /patrol/assign` 응답에  
+   `remote_excluded`, `meta.n_enter` / `n_near` / `n_remote_excluded`, `stops[].dwell_min`(15|5) 확인.
+2. **UX 파트** — `route-dev.html` (+ 필요 시 `patrol-run`)에서  
+   - enter / near 스톱 시각 구분 (색·라벨)  
+   - remote는 배정 라인에 안 넣고, “원거리 제외 N건” 패널/메타만 표시  
+   - 체류는 API `dwell_min` 표시 (15/5 하드코딩 금지)
+3. **(병행 가능)** EC2 `server/.env`에 `KAKAO_REST_KEY` 있는지·차량 선 품질만 확인.
+4. 그 다음: 체크 시 자동 재TOP → (안정화 후) index 이식 → (맨 마지막) 데이터 보완.
+
+### 6-F. 프론트 HTML 정본 (2026-08-17 정리)
 | 파일 | 역할 |
 |------|------|
 | `index.html` | 메인 지도 · 구 동선찾기(표시) · 메뉴 |
@@ -301,7 +335,8 @@ docs/ROUTE_DEV_PROGRESS.md 를 읽고 동선/순찰 배정 작업을 이어가 �
 위험격자(빨간 테두리)=방문 목표(JSON 공급). Q3 임도 우회는 미설계.
 DEV 시작점: 기본 GPS(내 위치 주변), 버튼「시청으로 이동」점등↔「내 위치로 이동».
 레이어 패널: 시/농경지/위험(risk_grids)/등산로/임도 +「시 전체」fit. 약수터 대기.
-EC2 http://13.209.67.39:8000 /patrol/* . 다음: 약수터·index 이식 등 §5.
+EC2 http://13.209.67.39:8000 /patrol/* .
+접근정책 임시: enter15/near5 · remote>1km 제외. 다음: §6-E UX (데이터 채우기 금지).
 ```
 
 ---

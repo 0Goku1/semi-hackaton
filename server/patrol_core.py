@@ -31,13 +31,24 @@ NETWORK_CANDIDATES = [
 VEH_KMH = 30.0
 DETOUR = 1.4
 TRANSFER_MIN = 6.0
-DWELL_MIN = 15
+# 임시 체류(분). 정책 확정 시 §6-D·아래 상수만 바꾸면 됨.
+DWELL_ENTER_MIN = 15
+DWELL_NEAR_MIN = 5
+DWELL_MIN = DWELL_ENTER_MIN  # 하위 호환·기본값
 BUDGET_MIN = 180
 WALK_KMH = 3.4
 
-# 접근 유형 (추후 근접/원격 감시 UI 확장용)
+# 접근 유형: enter ≤300m / near ≤1km / remote >1km(배정 제외)
 ACCESS_ENTER_M = 300
 ACCESS_NEAR_M = 1000
+
+
+def dwell_minutes_for(access_type: str) -> int:
+    if access_type == "near":
+        return DWELL_NEAR_MIN
+    if access_type == "enter":
+        return DWELL_ENTER_MIN
+    return 0
 
 
 @dataclass
@@ -271,15 +282,22 @@ def solve_top(
     scores: list[float],
     budget: int = BUDGET_MIN,
     dwell: int = DWELL_MIN,
+    dwells: Optional[list[int]] = None,
     time_limit_s: float = 2.0,
 ) -> list[list[int]]:
     """stops index in mat: 0..n_agents-1 agents, n_agents.. grids.
     Returns list of grid-local indices (0-based into scores) per agent in visit order.
+    dwells: 격자별 체류(분). 없으면 dwell 단일값.
     """
     n = mat.shape[0]
     n_grids = n - n_agents
     if n_grids <= 0 or n_agents <= 0:
         return [[] for _ in range(max(0, n_agents))]
+
+    if dwells is None:
+        dwells = [dwell] * n_grids
+    if len(dwells) != n_grids:
+        raise ValueError("dwells length must equal n_grids")
 
     mgr = pywrapcp.RoutingIndexManager(
         n, n_agents, list(range(n_agents)), list(range(n_agents))
@@ -288,7 +306,7 @@ def solve_top(
 
     def cb(from_i, to_i):
         i, j = mgr.IndexToNode(from_i), mgr.IndexToNode(to_i)
-        extra = dwell if j >= n_agents else 0
+        extra = dwells[j - n_agents] if j >= n_agents else 0
         return int(mat[i, j] + extra)
 
     transit = routing.RegisterTransitCallback(cb)
@@ -386,7 +404,7 @@ def enrich_leg_geometry(
                     "access_type": b.access_type,
                 }
             )
-            total += minutes + DWELL_MIN
+            total += minutes + dwell_minutes_for(b.access_type)
         else:
             legs.append(
                 {
@@ -446,6 +464,7 @@ def assign_patrol(
 
     stops: list[Stop] = []
     skipped_completed = []
+    remote_excluded: list[dict] = []
     for g in risk_grids:
         gid = g["grid_id"]
         if gid in completed_ids:
@@ -466,6 +485,17 @@ def assign_patrol(
             lat = float(g.get("lat") or 37.2)
             lon = float(g.get("lon") or 126.83)
         node, dist = net.nearest_node(lat, lon)
+        atype = access_type_for(dist)
+        if atype == "remote":
+            remote_excluded.append(
+                {
+                    "grid_id": gid,
+                    "score": float(g.get("score", 0.5)),
+                    "snap_dist_m": round(float(dist), 1),
+                    "access_type": "remote",
+                }
+            )
+            continue
         stops.append(
             Stop(
                 grid_id=gid,
@@ -475,7 +505,7 @@ def assign_patrol(
                 node=node,
                 comp=net.node_comp(node),
                 snap_dist_m=float(dist),
-                access_type=access_type_for(dist),
+                access_type=atype,
             )
         )
 
@@ -484,13 +514,27 @@ def assign_patrol(
             "ok": True,
             "routes": [],
             "unassigned": [],
+            "remote_excluded": remote_excluded,
             "completed_excluded": skipped_completed,
-            "meta": {"message": "배정할 위험 격자 없음(모두 순찰 완료)"},
+            "meta": {
+                "message": "배정할 위험 격자 없음(완료·remote 제외 후 후보 0)",
+                "n_remote_excluded": len(remote_excluded),
+                "dwell_enter_min": DWELL_ENTER_MIN,
+                "dwell_near_min": DWELL_NEAR_MIN,
+            },
         }
 
     mat = build_travel_matrix(net, officers, stops)
     scores = [s.score for s in stops]
-    routes_idx = solve_top(mat, len(officers), scores, budget=budget, time_limit_s=time_limit_s)
+    dwells = [dwell_minutes_for(s.access_type) for s in stops]
+    routes_idx = solve_top(
+        mat,
+        len(officers),
+        scores,
+        budget=budget,
+        dwells=dwells,
+        time_limit_s=time_limit_s,
+    )
 
     assigned = set()
     out_routes = []
@@ -501,11 +545,10 @@ def assign_patrol(
         if enrich_geometry and gidxs:
             legs, total_min = enrich_leg_geometry(net, officers, stops, gidxs, oi)
         else:
-            # minutes only from matrix
             cur = oi
             for gi in gidxs:
                 j = len(officers) + gi
-                total_min += float(mat[cur, j]) + DWELL_MIN
+                total_min += float(mat[cur, j]) + dwells[gi]
                 cur = j
 
         out_routes.append(
@@ -522,6 +565,7 @@ def assign_patrol(
                         "lon": stops[gi].lon,
                         "access_type": stops[gi].access_type,
                         "snap_dist_m": round(stops[gi].snap_dist_m, 1),
+                        "dwell_min": dwells[gi],
                         "status": "pending",
                     }
                     for gi in gidxs
@@ -531,7 +575,11 @@ def assign_patrol(
         )
 
     unassigned = [
-        {"grid_id": stops[i].grid_id, "score": stops[i].score}
+        {
+            "grid_id": stops[i].grid_id,
+            "score": stops[i].score,
+            "access_type": stops[i].access_type,
+        }
         for i in range(len(stops))
         if i not in assigned
     ]
@@ -540,6 +588,7 @@ def assign_patrol(
         "ok": True,
         "routes": out_routes,
         "unassigned": unassigned,
+        "remote_excluded": remote_excluded,
         "completed_excluded": skipped_completed,
         "unavailable_officers": [
             o["id"] for o in officers_raw if not o.get("available", True)
@@ -547,8 +596,13 @@ def assign_patrol(
         "meta": {
             "n_agents": len(officers),
             "n_risk": len(stops),
+            "n_enter": sum(1 for s in stops if s.access_type == "enter"),
+            "n_near": sum(1 for s in stops if s.access_type == "near"),
+            "n_remote_excluded": len(remote_excluded),
             "n_assigned": len(assigned),
             "budget_min": budget,
+            "dwell_enter_min": DWELL_ENTER_MIN,
+            "dwell_near_min": DWELL_NEAR_MIN,
             "dwell_min": DWELL_MIN,
             "solver": "OR-Tools TOP (PATH_CHEAPEST_ARC + GLS)",
             "network": str(net.path.name),
